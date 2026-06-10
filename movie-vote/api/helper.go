@@ -85,3 +85,20 @@ func SaveUser(user user.User) error {
 func SaveVote(vote vote.Vote) {
 	votes = append(votes, vote)
 }
+
+// PollExists checks PostgreSQL for a poll ID without loading the full poll.
+// SELECT EXISTS returns one true/false value, which is cheaper than reading every column.
+func PollExists(pollID string) (bool, error) {
+	var exists bool
+
+	err := database.DB.QueryRow(
+		"SELECT EXISTS(SELECT 1 FROM polls WHERE id = $1)",
+		pollID,
+	).Scan(&exists)
+
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}

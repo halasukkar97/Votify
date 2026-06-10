@@ -25,7 +25,8 @@ type CreateMovieResponse struct {
 }
 
 // CreateMovieHandler handles POST /movies.
-// It creates a movie model, saves it in PostgreSQL, and returns the saved data.
+// It creates a movie model, confirms the poll exists, saves the movie in PostgreSQL,
+// and returns the saved data.
 func CreateMovieHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreateMovieRequest
 
@@ -44,6 +45,18 @@ func CreateMovieHandler(w http.ResponseWriter, r *http.Request) {
 		ReleaseYear: req.ReleaseYear,
 		Description: req.Description,
 	})
+
+	// A movie must point to an existing poll, so check that before saving.
+	pollExists, pollError := PollExists(req.PollID)
+	if pollError != nil {
+		http.Error(w, "failed to check poll", http.StatusInternalServerError)
+		return
+	}
+
+	if !pollExists {
+		http.Error(w, "poll not found", http.StatusNotFound)
+		return
+	}
 
 	// Save the movie in PostgreSQL.
 	err := SaveMovie(createdMovie)
@@ -123,6 +136,49 @@ func GetAllMovies() ([]movie.Movie, error) {
 		var currentMovie movie.Movie
 
 		// Scan copies the current row's columns into the movie struct fields.
+		err := rows.Scan(
+			&currentMovie.ID,
+			&currentMovie.PollID,
+			&currentMovie.Title,
+			&currentMovie.ReleaseYear,
+			&currentMovie.Description,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		movies = append(movies, currentMovie)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return movies, nil
+}
+
+// GetMoviesByPollID reads only the movies that belong to one poll.
+// Poll listing uses this to include each poll's movie options in the response.
+func GetMoviesByPollID(pollID string) ([]movie.Movie, error) {
+	// The WHERE clause filters the movies table down to the requested poll ID.
+	rows, err := database.DB.Query(
+		"SELECT id, poll_id, title, release_year, description FROM movies WHERE poll_id = $1",
+		pollID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var movies []movie.Movie
+
+	// Build one movie struct for each returned database row.
+	for rows.Next() {
+		var currentMovie movie.Movie
+
 		err := rows.Scan(
 			&currentMovie.ID,
 			&currentMovie.PollID,
