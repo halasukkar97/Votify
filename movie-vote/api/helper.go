@@ -11,22 +11,28 @@ import (
 // FindPollByID searches the PostgreSQL polls table for a poll with the given ID.
 // It returns the poll and true when a row exists, otherwise nil and false.
 func FindPollByID(pollID string) (*poll.Poll, bool) {
+	var foundPoll poll.Poll
 
-	var poll poll.Poll
-
+	// QueryRow expects one row back. Scan copies each selected database column
+	// into the matching field on foundPoll.
 	err := database.DB.QueryRow(
-		"SELECT id, name FROM polls WHERE id = $1",
+		`SELECT id, name, is_closed, max_votes_per_person, deadline
+		FROM polls
+		WHERE id = $1`,
 		pollID,
 	).Scan(
-		&poll.ID,
-		&poll.Name,
+		&foundPoll.ID,
+		&foundPoll.Name,
+		&foundPoll.IsClosed,
+		&foundPoll.MaxVotesPerPerson,
+		&foundPoll.Deadline,
 	)
 
 	if err != nil {
 		return nil, false
 	}
 
-	return &poll, true
+	return &foundPoll, true
 }
 
 // SavePoll stores a newly created poll in PostgreSQL.
