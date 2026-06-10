@@ -98,8 +98,15 @@ func SaveUser(user user.User) error {
 // SaveVote stores a valid vote in PostgreSQL after the poll accepts it.
 // The votes table stores the vote owner, and vote_movies stores the selected movies.
 func SaveVote(vote vote.Vote) error {
+	// A transaction keeps the vote and its movie selections together.
+	// If any insert fails, Rollback cancels everything from this SaveVote call.
+	tx, err := database.DB.Begin()
+	if err != nil {
+		return err
+	}
+
 	// Insert the vote itself.
-	_, err := database.DB.Exec(
+	_, err = tx.Exec(
 		"INSERT INTO votes (id, poll_id, user_id) VALUES ($1, $2, $3)",
 		vote.ID,
 		vote.PollID,
@@ -107,22 +114,25 @@ func SaveVote(vote vote.Vote) error {
 	)
 
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
 	// Insert one row per selected movie.
 	for _, movieID := range vote.MovieIDs {
-		_, err := database.DB.Exec(
+		_, err = tx.Exec(
 			"INSERT INTO vote_movies (vote_id, movie_id) VALUES ($1, $2)",
 			vote.ID,
 			movieID,
 		)
 
 		if err != nil {
+			tx.Rollback()
 			return err
 		}
 	}
-	return nil
+
+	return tx.Commit()
 }
 
 // PollExists checks PostgreSQL for a poll ID without loading the full poll.
