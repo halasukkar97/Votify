@@ -1,6 +1,7 @@
 package api
 
 import (
+	"movie-vote/database"
 	"movie-vote/movie"
 	"movie-vote/poll"
 	"movie-vote/user"
@@ -26,8 +27,14 @@ func SaveMovie(movie movie.Movie) {
 	movies = append(movies, movie)
 }
 
-func SaveUser(user user.User) {
-	users = append(users, user)
+func SaveUser(user user.User) error {
+	_, err := database.DB.Exec(
+		"INSERT INTO users (id, name) VALUES ($1, $2)",
+		user.ID,
+		user.Name,
+	)
+
+	return err
 }
 
 func SaveVote(vote vote.Vote) {

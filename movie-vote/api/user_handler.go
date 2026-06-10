@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"movie-vote/database"
 	"movie-vote/user"
 	"net/http"
 )
@@ -32,7 +33,11 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 		Name: req.Name,
 	})
 
-	SaveUser(createdUser)
+	err := SaveUser(createdUser)
+	if err != nil {
+		http.Error(w, "failed to save user", http.StatusInternalServerError)
+		return
+	}
 
 	response := CreateUserResponse{
 		ID:   createdUser.ID,
@@ -63,11 +68,46 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 }
 
-// ListUsersHandler handles GET /users.
+// return all users as a json file 
 func ListUsersHandler(w http.ResponseWriter, r *http.Request) {
-	err := json.NewEncoder(w).Encode(users)
+	users, err := GetAllUsers()
+
 	if err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		http.Error(w, "failed to load users", http.StatusInternalServerError)
 		return
 	}
+
+	json.NewEncoder(w).Encode(users)
+}
+
+func GetAllUsers() ([]user.User, error) {
+
+	rows, err := database.DB.Query(
+		"SELECT id, name FROM users",
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var users []user.User
+
+	for rows.Next() {
+		var currentUser user.User
+
+		err := rows.Scan(
+			&currentUser.ID,
+			&currentUser.Name,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, currentUser)
+	}
+
+	return users, nil
 }
