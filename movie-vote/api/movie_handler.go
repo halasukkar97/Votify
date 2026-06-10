@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"movie-vote/database"
 	"movie-vote/movie"
 	"net/http"
 )
@@ -24,7 +25,7 @@ type CreateMovieResponse struct {
 }
 
 // CreateMovieHandler handles POST /movies.
-// It creates a movie, makes sure the target poll exists, and attaches the movie to that poll.
+// It creates a movie model, saves it in PostgreSQL, and returns the saved data.
 func CreateMovieHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreateMovieRequest
 
@@ -44,19 +45,12 @@ func CreateMovieHandler(w http.ResponseWriter, r *http.Request) {
 		Description: req.Description,
 	})
 
-	// A movie must belong to an existing poll.
-	foundPoll, found := FindPollByID(req.PollID)
-
-	if !found {
-		http.Error(w, "poll not found", http.StatusNotFound)
+	// Save the movie in PostgreSQL.
+	err := SaveMovie(createdMovie)
+	if err != nil {
+		http.Error(w, "failed to save movie", http.StatusInternalServerError)
 		return
 	}
-
-	// Keep a global list of movies for GET /movies.
-	SaveMovie(createdMovie)
-
-	// Also add the movie to its poll so voting validation can find it.
-	foundPoll.AddMovie(createdMovie)
 
 	// Return the created movie data to the client.
 	response := CreateMovieResponse{
@@ -86,7 +80,7 @@ func MoviesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// GET /movies lists every movie currently in memory.
+	// GET /movies lists every movie from PostgreSQL.
 	if r.Method == http.MethodGet {
 		ListMoviesHandler(w, r)
 		return
@@ -98,10 +92,55 @@ func MoviesHandler(w http.ResponseWriter, r *http.Request) {
 
 // ListMoviesHandler handles GET /movies.
 func ListMoviesHandler(w http.ResponseWriter, r *http.Request) {
-	// Return all movies as JSON.
-	err := json.NewEncoder(w).Encode(movies)
+	// Load all stored movies before encoding them as JSON.
+	movies, err := GetAllMovies()
+
 	if err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		http.Error(w, "failed to load movies", http.StatusInternalServerError)
 		return
 	}
+
+	json.NewEncoder(w).Encode(movies)
+}
+
+// GetAllMovies reads every movie row from PostgreSQL and converts each row into a movie.Movie.
+func GetAllMovies() ([]movie.Movie, error) {
+	// Query returns rows, which must be scanned one at a time.
+	rows, err := database.DB.Query(
+		"SELECT id, poll_id, title, release_year, description FROM movies",
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var movies []movie.Movie
+
+	// rows.Next moves through the result set one database row at a time.
+	for rows.Next() {
+		var currentMovie movie.Movie
+
+		// Scan copies the current row's columns into the movie struct fields.
+		err := rows.Scan(
+			&currentMovie.ID,
+			&currentMovie.PollID,
+			&currentMovie.Title,
+			&currentMovie.ReleaseYear,
+			&currentMovie.Description,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		movies = append(movies, currentMovie)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return movies, nil
 }

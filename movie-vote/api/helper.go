@@ -52,9 +52,21 @@ func SavePoll(poll poll.Poll) error {
 	return err
 }
 
-// SaveMovie stores a newly created movie in memory.
-func SaveMovie(movie movie.Movie) {
-	movies = append(movies, movie)
+// SaveMovie stores a newly created movie in PostgreSQL.
+// Returning an error lets the HTTP handler report database save failures.
+func SaveMovie(movie movie.Movie) error {
+	_, err := database.DB.Exec(
+		`INSERT INTO movies
+		(id, poll_id, title, release_year, description)
+		VALUES ($1, $2, $3, $4, $5)`,
+		movie.ID,
+		movie.PollID,
+		movie.Title,
+		movie.ReleaseYear,
+		movie.Description,
+	)
+
+	return err
 }
 
 // SaveUser stores a newly created user in PostgreSQL.
