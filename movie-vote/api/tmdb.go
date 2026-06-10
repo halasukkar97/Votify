@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 )
 
@@ -50,8 +51,13 @@ func SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {
 func SearchMovies(query string) ([]ExternalMovie, error) {
 
 	apiKey := os.Getenv("TMDB_API_KEY")
+	// QueryEscape makes the search text safe to place inside a URL.
+	// For example, "star wars" becomes "star+wars".
+	escapedQuery := url.QueryEscape(query)
+
 	// TMDB_API_KEY comes from the .env file loaded in main.
-	url := "https://api.themoviedb.org/3/search/movie?query=" + query + "&api_key=" + apiKey
+	url := "https://api.themoviedb.org/3/search/movie?query=" +
+		escapedQuery + "&api_key=" + apiKey
 
 	// Send a GET request to the external API.
 	// Think: Go becomes a client, just like Postman.
