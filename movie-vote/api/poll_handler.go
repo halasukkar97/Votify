@@ -126,7 +126,7 @@ func ListPollsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetAllPolls reads every poll row from PostgreSQL and converts each row into a poll.Poll.
-// It also loads each poll's movies so clients can see the available movie options.
+// It also loads each poll's movies and votes so clients can see the full poll state.
 func GetAllPolls() ([]poll.Poll, error) {
 	// Query returns rows, which must be scanned one at a time.
 	rows, err := database.DB.Query(
@@ -165,6 +165,15 @@ func GetAllPolls() ([]poll.Poll, error) {
 		}
 
 		currentPoll.Movies = movies
+
+		// Load the votes connected to this poll, including the selected movie IDs.
+		votes, err := GetVotesByPollID(currentPoll.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		currentPoll.Votes = votes
+
 		polls = append(polls, currentPoll)
 	}
 

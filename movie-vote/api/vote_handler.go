@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"movie-vote/database"
 	"movie-vote/vote"
 	"net/http"
 )
@@ -56,9 +57,12 @@ func CreateVoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Keep a global vote list as well as the vote stored inside the poll.
-	SaveVote(createdVote)
-
+	// SaveVote writes the vote and its selected movie IDs to PostgreSQL.
+	saveErr := SaveVote(createdVote)
+	if saveErr != nil {
+		http.Error(w, "failed to save vote", http.StatusInternalServerError)
+		return
+	}
 	response := createVoteResponse{
 		ID:       createdVote.ID,
 		PollID:   createdVote.PollID,
@@ -73,4 +77,52 @@ func CreateVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+}
+
+// GetVotesByPollID reads all votes submitted for one poll.
+// It also loads each vote's selected movie IDs from the vote_movies table.
+func GetVotesByPollID(pollID string) ([]vote.Vote, error) {
+	// First load the vote rows for this poll.
+	rows, err := database.DB.Query(
+		"SELECT id, poll_id, user_id FROM votes WHERE poll_id = $1",
+		pollID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var votes []vote.Vote
+
+	// Build one vote struct for each returned database row.
+	for rows.Next() {
+		var currentVote vote.Vote
+
+		err := rows.Scan(
+			&currentVote.ID,
+			&currentVote.PollID,
+			&currentVote.UserID,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// The selected movies live in the vote_movies join table.
+		movieIDs, err := GetMovieIDsByVoteID(currentVote.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		currentVote.MovieIDs = movieIDs
+		votes = append(votes, currentVote)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return votes, nil
 }

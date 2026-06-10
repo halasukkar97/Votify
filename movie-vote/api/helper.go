@@ -32,6 +32,13 @@ func FindPollByID(pollID string) (*poll.Poll, bool) {
 		return nil, false
 	}
 
+	movies, err := GetMoviesByPollID(foundPoll.ID)
+	if err != nil {
+		return nil, false
+	}
+
+	foundPoll.Movies = movies
+
 	return &foundPoll, true
 }
 
@@ -81,9 +88,34 @@ func SaveUser(user user.User) error {
 	return err
 }
 
-// SaveVote stores a valid vote in memory after the poll accepts it.
-func SaveVote(vote vote.Vote) {
-	votes = append(votes, vote)
+// SaveVote stores a valid vote in PostgreSQL after the poll accepts it.
+// The votes table stores the vote owner, and vote_movies stores the selected movies.
+func SaveVote(vote vote.Vote) error {
+	// Insert the vote itself.
+	_, err := database.DB.Exec(
+		"INSERT INTO votes (id, poll_id, user_id) VALUES ($1, $2, $3)",
+		vote.ID,
+		vote.PollID,
+		vote.UserID,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	// Insert one row per selected movie.
+	for _, movieID := range vote.MovieIDs {
+		_, err := database.DB.Exec(
+			"INSERT INTO vote_movies (vote_id, movie_id) VALUES ($1, $2)",
+			vote.ID,
+			movieID,
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // PollExists checks PostgreSQL for a poll ID without loading the full poll.
@@ -101,4 +133,40 @@ func PollExists(pollID string) (bool, error) {
 	}
 
 	return exists, nil
+}
+
+// GetMovieIDsByVoteID reads the selected movie IDs for one vote.
+// Votes and movies are connected through the vote_movies join table.
+func GetMovieIDsByVoteID(voteID string) ([]string, error) {
+	// Each row contains one movie selected by this vote.
+	rows, err := database.DB.Query(
+		"SELECT movie_id FROM vote_movies WHERE vote_id = $1",
+		voteID,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var movieIDs []string
+
+	// Collect every movie_id into a plain []string for the vote model.
+	for rows.Next() {
+		var movieID string
+
+		err := rows.Scan(&movieID)
+		if err != nil {
+			return nil, err
+		}
+
+		movieIDs = append(movieIDs, movieID)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return movieIDs, nil
 }
