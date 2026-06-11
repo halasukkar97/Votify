@@ -11,6 +11,7 @@ import (
 type createVoteRequest struct {
 	MovieIDs []string `json:"movieIds"`
 	PollID   string   `json:"pollId"`
+	PollCode string   `json:"pollCode"`
 	UserID   string   `json:"userId"`
 }
 
@@ -18,6 +19,7 @@ type createVoteRequest struct {
 type createVoteResponse struct {
 	ID       string   `json:"id"`
 	PollID   string   `json:"pollId"`
+	PollCode string   `json:"pollCode"`
 	UserID   string   `json:"userId"`
 	MovieIDs []string `json:"movieIds"`
 }
@@ -35,20 +37,27 @@ func CreateVoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build the vote model from the request data.
-	createdVote := vote.CreateNewVote(vote.CreateVoteInput{
-		PollID:   req.PollID,
-		UserID:   req.UserID,
-		MovieIDs: req.MovieIDs,
-	})
-
 	// A vote can only be submitted to an existing poll.
-	foundPoll, found := FindPollByID(req.PollID)
+	foundPoll, found := FindPollByCode(req.PollCode)
+	if req.PollCode == "" {
+		foundPoll, found = nil, false
+	}
+	if !found && req.PollID != "" {
+		foundPoll, found = FindPollByID(req.PollID)
+	}
 
 	if !found {
 		http.Error(w, "poll not found", http.StatusNotFound)
 		return
 	}
+
+	// Build the vote model from the request data.
+	// PollID stays internal, even when the client joins with a public pollCode.
+	createdVote := vote.CreateNewVote(vote.CreateVoteInput{
+		PollID:   foundPoll.ID,
+		UserID:   req.UserID,
+		MovieIDs: req.MovieIDs,
+	})
 
 	// SubmitVote checks the poll rules before adding the vote to the poll.
 	submitErr := foundPoll.SubmitVote(createdVote)
@@ -66,6 +75,7 @@ func CreateVoteHandler(w http.ResponseWriter, r *http.Request) {
 	response := createVoteResponse{
 		ID:       createdVote.ID,
 		PollID:   createdVote.PollID,
+		PollCode: foundPoll.PollCode,
 		UserID:   createdVote.UserID,
 		MovieIDs: createdVote.MovieIDs,
 	}

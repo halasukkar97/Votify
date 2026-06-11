@@ -28,7 +28,7 @@ func findPollByColumn(column string, value string) (*poll.Poll, bool) {
 	// QueryRow expects one row back. Scan copies each selected database column
 	// into the matching field on foundPoll.
 	err := database.DB.QueryRow(
-		`SELECT id, poll_code, name, is_closed, max_votes_per_person, deadline
+		`SELECT id, COALESCE(poll_code, '') AS poll_code, name, is_closed, max_votes_per_person, deadline
 		FROM polls
 		WHERE `+column+` = $1`,
 		value,

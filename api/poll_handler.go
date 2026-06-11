@@ -103,13 +103,20 @@ func PollsHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 }
 
-// ResultsHandler handles GET /results?pollId=...
+// ResultsHandler handles GET /results?pollCode=...
 // It finds the requested poll and returns vote totals keyed by movie ID.
 func ResultsHandler(w http.ResponseWriter, r *http.Request) {
 	// Query parameters come from the URL after the question mark.
+	pollCode := r.URL.Query().Get("pollCode")
 	pollID := r.URL.Query().Get("pollId")
 
-	foundPoll, found := FindPollByID(pollID)
+	foundPoll, found := FindPollByCode(pollCode)
+	if pollCode == "" {
+		foundPoll, found = nil, false
+	}
+	if !found && pollID != "" {
+		foundPoll, found = FindPollByID(pollID)
+	}
 
 	if !found {
 		http.Error(w, "poll not found", http.StatusNotFound)
@@ -143,7 +150,7 @@ func ListPollsHandler(w http.ResponseWriter, r *http.Request) {
 func GetAllPolls() ([]poll.Poll, error) {
 	// Query returns rows, which must be scanned one at a time.
 	rows, err := database.DB.Query(
-		"SELECT id, poll_code, name, is_closed, max_votes_per_person, deadline FROM polls",
+		"SELECT id, COALESCE(poll_code, '') AS poll_code, name, is_closed, max_votes_per_person, deadline FROM polls",
 	)
 
 	if err != nil {

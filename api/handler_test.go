@@ -26,7 +26,7 @@ func expectEmptyRelations(mock sqlmock.Sqlmock, pollID string) {
 
 // expectPollLookup prepares the SQL rows needed by FindPollByID.
 func expectPollLookup(mock sqlmock.Sqlmock, pollID string, deadline time.Time) {
-	mock.ExpectQuery("SELECT id, poll_code, name, is_closed, max_votes_per_person, deadline").
+	mock.ExpectQuery(`SELECT id, COALESCE\(poll_code, ''\) AS poll_code, name, is_closed, max_votes_per_person, deadline`).
 		WithArgs(pollID).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id",
@@ -93,7 +93,7 @@ func TestListPollsHandlerReturnsPollsWithMoviesAndVotes(t *testing.T) {
 	_, mock := newMockDatabase(t)
 	deadline := time.Now().Add(24 * time.Hour)
 
-	mock.ExpectQuery("SELECT id, poll_code, name, is_closed, max_votes_per_person, deadline FROM polls").
+	mock.ExpectQuery(`SELECT id, COALESCE\(poll_code, ''\) AS poll_code, name, is_closed, max_votes_per_person, deadline FROM polls`).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id",
 			"poll_code",
