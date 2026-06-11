@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"movie-vote/api"
-	"movie-vote/database"
 	"net/http"
 	"os"
+	"votify/api"
+	"votify/database"
 
 	"github.com/joho/godotenv"
 )

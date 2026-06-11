@@ -1,10 +1,10 @@
 package poll
 
 import (
-	"movie-vote/movie"
-	"movie-vote/vote"
 	"testing"
 	"time"
+	"votify/movie"
+	"votify/vote"
 )
 
 // newTestPoll builds a poll with only the fields each test cares about.

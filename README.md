@@ -1,6 +1,6 @@
-# MoviePollGO
+# Votify
 
-MoviePollGO is a Go HTTP API for creating movie polls, adding movie options, registering users, voting, viewing results, and searching external movie data from TMDB.
+Votify is a Go HTTP API for creating movie polls, adding movie options, registering users, voting, viewing results, and searching external movie data from TMDB.
 
 The app uses:
 
@@ -12,17 +12,17 @@ The app uses:
 
 ## Project Structure
 
-- `movie-vote/main.go`: starts the server, loads `.env`, connects to PostgreSQL, and registers routes.
-- `movie-vote/database`: owns the shared PostgreSQL connection.
-- `movie-vote/api`: HTTP handlers, database helper functions, and TMDB search.
-- `movie-vote/poll`: poll domain model and voting rules.
-- `movie-vote/movie`: movie domain model.
-- `movie-vote/user`: user domain model.
-- `movie-vote/vote`: vote domain model.
+- `votify/main.go`: starts the server, loads `.env`, connects to PostgreSQL, and registers routes.
+- `votify/database`: owns the shared PostgreSQL connection.
+- `votify/api`: HTTP handlers, database helper functions, and TMDB search.
+- `votify/poll`: poll domain model and voting rules.
+- `votify/movie`: movie domain model.
+- `votify/user`: user domain model.
+- `votify/vote`: vote domain model.
 
 ## Environment
 
-Create `movie-vote/.env` locally:
+Create `votify/.env` locally:
 
 ```env
 TMDB_API_KEY=your_tmdb_api_key

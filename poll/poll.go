@@ -2,9 +2,9 @@ package poll
 
 import (
 	"errors"
-	"movie-vote/movie"
-	"movie-vote/vote"
 	"time"
+	"votify/movie"
+	"votify/vote"
 
 	"github.com/google/uuid"
 )

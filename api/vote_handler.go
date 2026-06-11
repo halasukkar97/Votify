@@ -2,9 +2,9 @@ package api
 
 import (
 	"encoding/json"
-	"movie-vote/database"
-	"movie-vote/vote"
 	"net/http"
+	"votify/database"
+	"votify/vote"
 )
 
 // createVoteRequest is the JSON body clients send when they vote in a poll.

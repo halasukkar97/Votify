@@ -3,11 +3,11 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"movie-vote/movie"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+	"votify/movie"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )

@@ -2,9 +2,9 @@ package api
 
 import (
 	"encoding/json"
-	"movie-vote/database"
-	"movie-vote/user"
 	"net/http"
+	"votify/database"
+	"votify/user"
 )
 
 // CreateUserRequest is the JSON body clients send when they create a user.

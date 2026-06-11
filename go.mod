@@ -1,4 +1,4 @@
-module movie-vote
+module votify
 
 go 1.26.4
 

@@ -2,9 +2,9 @@ package api
 
 import (
 	"encoding/json"
-	"movie-vote/database"
-	"movie-vote/movie"
 	"net/http"
+	"votify/database"
+	"votify/movie"
 )
 
 // CreateMovieRequest is the JSON body clients send when they add a movie to a poll.

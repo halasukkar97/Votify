@@ -3,13 +3,13 @@ package api
 import (
 	"database/sql"
 	"errors"
-	"movie-vote/database"
-	"movie-vote/movie"
-	"movie-vote/poll"
-	"movie-vote/user"
-	"movie-vote/vote"
 	"testing"
 	"time"
+	"votify/database"
+	"votify/movie"
+	"votify/poll"
+	"votify/user"
+	"votify/vote"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )

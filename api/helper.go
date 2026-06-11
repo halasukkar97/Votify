@@ -1,11 +1,11 @@
 package api
 
 import (
-	"movie-vote/database"
-	"movie-vote/movie"
-	"movie-vote/poll"
-	"movie-vote/user"
-	"movie-vote/vote"
+	"votify/database"
+	"votify/movie"
+	"votify/poll"
+	"votify/user"
+	"votify/vote"
 )
 
 // FindPollByID searches the PostgreSQL polls table for a poll with the given ID.

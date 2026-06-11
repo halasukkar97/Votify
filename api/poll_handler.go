@@ -2,11 +2,11 @@ package api
 
 import (
 	"encoding/json"
-	"movie-vote/database"
-	"movie-vote/poll"
 	"net/http"
 	"strings"
 	"time"
+	"votify/database"
+	"votify/poll"
 )
 
 // CreatePollRequest is the JSON body clients send when they create a poll.
