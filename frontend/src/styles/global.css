@@ -96,6 +96,20 @@ nav a.active {
   position: relative;
 }
 
+.language-button {
+  gap: 5px;
+}
+
+.language-chevron {
+  font-size: 12px;
+  line-height: 1;
+  transition: transform 140ms ease;
+}
+
+.language-button[aria-expanded="true"] .language-chevron {
+  transform: rotate(180deg);
+}
+
 .language-menu {
   position: absolute;
   top: calc(100% + 10px);
@@ -136,7 +150,8 @@ main {
 }
 
 .page:not(.poll-page) .form {
-  width: 100%;
+  width: min(640px, 100%);
+  justify-self: center;
 }
 
 .page h1 {
@@ -147,6 +162,11 @@ main {
 .page p {
   margin: 0;
   color: #52616d;
+}
+
+.page > .loading-indicator {
+  justify-self: center;
+  margin-top: 8px;
 }
 
 .actions {

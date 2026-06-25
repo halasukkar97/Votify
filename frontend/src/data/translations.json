@@ -96,7 +96,11 @@
     "poll.votingStarted": "Voting has started.",
     "poll.startVotingError": "Could not start voting.",
     "poll.votingActive": "Voting is active.",
-    "poll.addMovieAfterVotingStarted": "Voting has already started, movies can no longer be added."
+    "poll.addMovieAfterVotingStarted": "Voting has already started, movies can no longer be added.",
+    "name.update": "Update your name",
+    "name.current": "Current name",
+    "name.updateButton": "Update name",
+    "name.cancel": "Cancel"
   },
   "de": {
     "app.brand": "Votify",
@@ -195,6 +199,10 @@
     "poll.votingStarted": "Die Abstimmung wurde gestartet.",
     "poll.startVotingError": "Abstimmung konnte nicht gestartet werden.",
     "poll.votingActive": "Die Abstimmung ist aktiv.",
-    "poll.addMovieAfterVotingStarted": "Die Abstimmung hat bereits begonnen, Filme können nicht mehr hinzugefügt werden."
+    "poll.addMovieAfterVotingStarted": "Die Abstimmung hat bereits begonnen, Filme können nicht mehr hinzugefügt werden.",
+    "name.update": "Namen aktualisieren",
+    "name.current": "Aktueller Name",
+    "name.updateButton": "Namen aktualisieren",
+    "name.cancel": "Abbrechen"
   }
 }

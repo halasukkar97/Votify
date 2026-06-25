@@ -1,6 +1,6 @@
 # Votify
 
-Votify is a Go HTTP API for creating movie polls, adding movie options, registering users, voting, viewing results, and searching external movie data from TMDB.
+Votify is a full-stack movie polling application with a Go API and a React frontend for creating polls, adding movie options, voting, viewing results, and searching TMDB.
 
 The app uses:
 
@@ -19,6 +19,7 @@ The app uses:
 - `votify/movie`: movie domain model.
 - `votify/user`: user domain model.
 - `votify/vote`: vote domain model.
+- `frontend`: React, TypeScript, and Vite client application.
 
 ## Environment
 
@@ -78,6 +79,13 @@ CREATE TABLE vote_movies (
 );
 ```
 
+For an existing database created before voting activation was added, run:
+
+```sql
+ALTER TABLE polls
+ADD COLUMN IF NOT EXISTS is_voting_active BOOLEAN NOT NULL DEFAULT FALSE;
+```
+
 For an existing database created before movie posters were added, run:
 
 ```sql
@@ -86,10 +94,9 @@ ALTER TABLE movies ADD COLUMN IF NOT EXISTS poster_url TEXT;
 
 ## Run
 
-From the Go module directory:
+From the repository root:
 
 ```bash
-cd movie-vote
 go run .
 ```
 
@@ -98,6 +105,16 @@ The API listens on:
 ```text
 http://localhost:8080
 ```
+
+Run the frontend from the `frontend` directory:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite development server normally runs at `http://localhost:5173`. The selected language and display name are stored in the browser's local storage.
 
 ## API Routes
 
@@ -234,10 +251,9 @@ Votes are saved transactionally: the vote row and all selected movie rows either
 
 ## Tests
 
-Run all tests from the module directory:
+Run all backend tests from the repository root:
 
 ```bash
-cd movie-vote
 go test ./...
 ```
 

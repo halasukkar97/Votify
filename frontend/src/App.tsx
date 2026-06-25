@@ -22,7 +22,8 @@ export default function App() {
   const [draftName, setDraftName] = useState(savedName);
   const [isEditingName, setIsEditingName] = useState(savedName.length === 0);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
-  const isNameEntryVisible = savedName.length === 0 || isEditingName;
+  const isInitialNameEntry = savedName.length === 0;
+  const isNameFormVisible = isInitialNameEntry || isEditingName;
 
   const navItems = [
     { to: '/', label: t('nav.home') },
@@ -46,6 +47,12 @@ export default function App() {
     navigate('/');
   }
 
+  // cancelNameEdit restores the saved value without replacing the current user name.
+  function cancelNameEdit() {
+    setDraftName(savedName);
+    setIsEditingName(false);
+  }
+
   // chooseLanguage updates the app text and closes the small language menu.
   function chooseLanguage(nextLanguage: Language) {
     setLanguage(nextLanguage);
@@ -64,14 +71,14 @@ export default function App() {
   }
 
   return (
-    <div className={isNameEntryVisible ? 'app-shell app-shell--name-entry' : 'app-shell'}>
+    <div className={isInitialNameEntry ? 'app-shell app-shell--name-entry' : 'app-shell'}>
       <header className="site-header">
         <a className="brand" href="/">
           {t('app.brand')}
         </a>
 
         <div className="header-menu">
-          {!isNameEntryVisible ? (
+          {!isInitialNameEntry ? (
             <nav aria-label="Main navigation">
               {navItems.map((item) => (
                 <NavLink
@@ -92,18 +99,22 @@ export default function App() {
             <button
               type="button"
               className="language-button"
+              aria-expanded={isLanguageMenuOpen}
+              aria-haspopup="menu"
               aria-label={t('language.label')}
               onClick={() => setIsLanguageMenuOpen((isOpen) => !isOpen)}
             >
-              {language.toUpperCase()}
+              <span>{language.toUpperCase()}</span>
+              <span className="language-chevron" aria-hidden="true">▾</span>
             </button>
 
             {isLanguageMenuOpen ? (
-              <div className="language-menu">
+              <div className="language-menu" role="menu">
                 {languages.map((availableLanguage) => (
                   <button
                     key={availableLanguage}
                     type="button"
+                    role="menuitem"
                     onClick={() => chooseLanguage(availableLanguage)}
                   >
                     {availableLanguage.toUpperCase()}
@@ -116,14 +127,16 @@ export default function App() {
       </header>
 
       <main>
-        <Breadcrumbs t={t} />
+        {!isInitialNameEntry ? <Breadcrumbs t={t} /> : null}
         <Routes>
           <Route
             path="/"
             element={
               <HomePage
                 draftName={draftName}
-                isEditingName={isNameEntryVisible}
+                isEditingName={isNameFormVisible}
+                isInitialNameEntry={isInitialNameEntry}
+                onCancelNameEdit={cancelNameEdit}
                 onDraftNameChange={setDraftName}
                 onSaveName={saveName}
                 t={t}

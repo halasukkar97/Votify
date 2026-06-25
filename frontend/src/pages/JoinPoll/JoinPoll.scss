@@ -1,9 +1,12 @@
 .join-poll-page {
   .form {
+    width: min(640px, 100%);
+    justify-self: center;
     align-items: start;
   }
 
   .saved-name-note {
+    justify-self: center;
     font-weight: 600;
   }
 }

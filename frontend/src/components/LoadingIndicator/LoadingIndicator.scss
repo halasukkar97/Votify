@@ -1,0 +1,52 @@
+.loading-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #52616d;
+  font-weight: 600;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border: 3px solid #d8dee4;
+  border-top-color: #172026;
+  border-radius: 50%;
+  animation: loading-indicator-spin 700ms linear infinite;
+}
+
+.loading-indicator--compact {
+  gap: 8px;
+  color: inherit;
+}
+
+.loading-indicator--compact .loading-spinner {
+  width: 17px;
+  height: 17px;
+  border-width: 2px;
+  border-color: rgba(255, 255, 255, 0.45);
+  border-top-color: currentColor;
+}
+
+.movie-search-status .loading-indicator--compact {
+  color: #52616d;
+}
+
+.movie-search-status .loading-indicator--compact .loading-spinner {
+  border-color: #d8dee4;
+  border-top-color: #52616d;
+}
+
+@keyframes loading-indicator-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation-duration: 1400ms;
+  }
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { apiClient } from '../../api/client';
+import { LoadingIndicator } from '../../components/LoadingIndicator';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { ExternalMovie, Movie, PollResults } from '../../api/client';
 import type {
@@ -420,7 +421,7 @@ export function PollPage({ t }: PollPageProps) {
   }
 
   if (pollState.isLoading) {
-    return <section className="page poll-page"><p>{t('poll.loading')}</p></section>;
+    return <section className="page poll-page"><LoadingIndicator label={t('poll.loading')} /></section>;
   }
 
   if (!pollState.poll) {
@@ -529,7 +530,7 @@ export function PollPage({ t }: PollPageProps) {
 
           <div className="movie-search-status" aria-live="polite">
             {movieDraft.title.trim().length < 2 && !selectedMovie ? t('poll.searchHint') : null}
-            {movieSearch.isSearching ? t('poll.searchLoading') : null}
+            {movieSearch.isSearching ? <LoadingIndicator compact label={t('poll.searchLoading')} /> : null}
             {movieSearch.searchError ? movieSearch.searchError : null}
             {shouldShowNoMoviesFound ? t('poll.noMoviesFound') : null}
           </div>

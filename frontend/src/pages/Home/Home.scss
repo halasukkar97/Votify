@@ -1,13 +1,18 @@
 .home-page {
   .actions {
     flex-wrap: wrap;
+    justify-content: center;
   }
 }
 
 .name-entry-page {
-  min-height: calc(100vh - 96px);
+  min-height: 420px;
   display: grid;
   place-items: center;
+
+  &.name-entry-page--initial {
+    min-height: calc(100vh - 80px);
+  }
 
   .name-form {
     width: min(420px, 100%);
@@ -16,10 +21,33 @@
     border: 1px solid #dde2e7;
     border-radius: 8px;
     background: #ffffff;
+    box-shadow: 0 8px 22px rgba(23, 32, 38, 0.06);
   }
 
   h1 {
     margin: 0;
     font-size: 28px;
+  }
+
+  .name-form-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .name-form-actions button {
+    min-width: 128px;
+  }
+
+  .secondary-button {
+    background: #ffffff;
+    color: #172026;
+  }
+}
+
+@media (max-width: 480px) {
+  .name-entry-page .name-form-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
   }
 }

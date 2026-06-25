@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../../api/client';
+import { LoadingIndicator } from '../../components/LoadingIndicator';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { TranslationKey } from '../../i18n/useTranslations';
 import type { CreatePollFormValues } from './interfaces';
@@ -107,7 +108,7 @@ export function CreatePollPage({ t }: CreatePollPageProps) {
         </label>
 
         <button type="submit" disabled={isCreating}>
-          {isCreating ? t('create.loading') : t('create.button')}
+          {isCreating ? <LoadingIndicator compact label={t('create.loading')} /> : t('create.button')}
         </button>
       </form>
 

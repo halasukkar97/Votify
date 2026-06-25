@@ -1,4 +1,10 @@
 .create-poll-page {
+  .form,
+  .feedback {
+    width: min(640px, 100%);
+    justify-self: center;
+  }
+
   .form {
     align-items: start;
   }

@@ -7,6 +7,8 @@ import './Home.scss';
 export function HomePage({
   draftName,
   isEditingName,
+  isInitialNameEntry,
+  onCancelNameEdit,
   onDraftNameChange,
   onSaveName,
   t,
@@ -26,11 +28,11 @@ export function HomePage({
 
   if (isEditingName) {
     return (
-      <section className="name-entry-page">
+      <section className={isInitialNameEntry ? 'name-entry-page name-entry-page--initial' : 'name-entry-page'}>
         <form className="form name-form" onSubmit={saveName}>
-          <h1>{t('name.enter')}</h1>
+          <h1>{t(isInitialNameEntry ? 'name.enter' : 'name.update')}</h1>
           <label>
-            {t('name.enter')}
+            {t(isInitialNameEntry ? 'name.enter' : 'name.current')}
             <input
               name="name"
               type="text"
@@ -40,7 +42,14 @@ export function HomePage({
               autoFocus
             />
           </label>
-          <button type="submit">{t('name.button')}</button>
+          <div className="name-form-actions">
+            {!isInitialNameEntry ? (
+              <button type="button" className="secondary-button" onClick={onCancelNameEdit}>
+                {t('name.cancel')}
+              </button>
+            ) : null}
+            <button type="submit">{t(isInitialNameEntry ? 'name.button' : 'name.updateButton')}</button>
+          </div>
         </form>
       </section>
     );

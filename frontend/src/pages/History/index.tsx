@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../../api/client';
+import { LoadingIndicator } from '../../components/LoadingIndicator';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { HistoryPageProps, HistoryState } from './interfaces';
 import './History.scss';
@@ -50,7 +51,7 @@ export function HistoryPage({ t }: HistoryPageProps) {
     <section className="page history-page">
       <h1>{t('history.title')}</h1>
 
-      {historyState.isLoading ? <p>{t('history.loading')}</p> : null}
+      {historyState.isLoading ? <LoadingIndicator label={t('history.loading')} /> : null}
       {historyState.errorMessage ? <p className="history-error">{historyState.errorMessage}</p> : null}
 
       {!historyState.isLoading && !historyState.errorMessage && historyState.polls.length === 0 ? (
