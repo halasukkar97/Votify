@@ -4,8 +4,8 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="refactor: add service and repository layers to Go backend">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="docs: update backend run and Render deploy commands">
+      <change beforePath="$PROJECT_DIR$/cmd/server/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/server/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -181,6 +181,7 @@
     <MESSAGE value="fix: preserve voter identity when updating display name" />
     <MESSAGE value="refactor: reorganize Go backend into idiomatic internal packages" />
     <MESSAGE value="refactor: add service and repository layers to Go backend" />
-    <option name="LAST_COMMIT_MESSAGE" value="refactor: add service and repository layers to Go backend" />
+    <MESSAGE value="docs: update backend run and Render deploy commands" />
+    <option name="LAST_COMMIT_MESSAGE" value="docs: update backend run and Render deploy commands" />
   </component>
 </project>
