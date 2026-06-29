@@ -97,7 +97,7 @@ ALTER TABLE movies ADD COLUMN IF NOT EXISTS poster_url TEXT;
 From the repository root:
 
 ```bash
-go run .
+go run ./cmd/server
 ```
 
 The API listens on:
@@ -105,6 +105,17 @@ The API listens on:
 ```text
 http://localhost:8080
 ```
+
+## Deploy Backend on Render
+
+Because the Go entry point lives in `cmd/server`, Render must build that package instead of the repository root. Use these settings for the backend service:
+
+```text
+Build Command: go build -o app ./cmd/server
+Start Command: ./app
+```
+
+Keep the Render root directory set to the repository root unless you intentionally move the backend into another folder.
 
 Run the frontend from the `frontend` directory:
 

@@ -4,21 +4,8 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="refactor: reorganize Go backend into idiomatic internal packages">
+    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="refactor: add service and repository layers to Go backend">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmd/server/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/server/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/handler_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/handler_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/movie_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/movie_handler.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/poll_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/poll_handler.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/tmdb.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/tmdb.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/tmdb_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/tmdb_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/user_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/user_handler.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/vote_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/vote_handler.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/config/config.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/config/config.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/database/database.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/database/database.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/database/doc.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/database/doc.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/database/storage.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/database/storage_test.go" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -193,6 +180,7 @@
     <MESSAGE value="feat(frontend): improve poll voting layout and selection flow" />
     <MESSAGE value="fix: preserve voter identity when updating display name" />
     <MESSAGE value="refactor: reorganize Go backend into idiomatic internal packages" />
-    <option name="LAST_COMMIT_MESSAGE" value="refactor: reorganize Go backend into idiomatic internal packages" />
+    <MESSAGE value="refactor: add service and repository layers to Go backend" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor: add service and repository layers to Go backend" />
   </component>
 </project>
