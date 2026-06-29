@@ -1,8 +1,10 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"votify/database"
 	"votify/user"
 )
@@ -15,6 +17,11 @@ type CreateUserRequest struct {
 // CreateUserResponse is the JSON response sent back after a user is created.
 type CreateUserResponse struct {
 	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// UpdateUserRequest is the JSON body clients send when they rename a user.
+type UpdateUserRequest struct {
 	Name string `json:"name"`
 }
 
@@ -76,6 +83,56 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Any other method is not supported for this route.
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+// UserByIDHandler routes requests that target one existing user.
+func UserByIDHandler(w http.ResponseWriter, r *http.Request) {
+	// PATCH /users/{id} updates the saved display name without changing identity.
+	if r.Method == http.MethodPatch {
+		UpdateUserHandler(w, r)
+		return
+	}
+
+	// Any other method is not supported for this route.
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+// UpdateUserHandler handles PATCH /users/{id}.
+// It lets the frontend edit a display name while keeping the same user ID for voting.
+func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+	userID := strings.TrimPrefix(r.URL.Path, "/users/")
+	if userID == "" {
+		http.Error(w, "missing user id", http.StatusBadRequest)
+		return
+	}
+
+	var req UpdateUserRequest
+
+	// Decode the incoming JSON request body into req.
+	decodeErr := json.NewDecoder(r.Body).Decode(&req)
+	if decodeErr != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		http.Error(w, "name is required", http.StatusBadRequest)
+		return
+	}
+
+	updatedUser, err := UpdateUserName(userID, name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "user not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "failed to update user", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(updatedUser)
 }
 
 // ListUsersHandler handles GET /users.

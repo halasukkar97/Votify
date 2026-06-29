@@ -167,6 +167,20 @@ func SaveUser(user user.User) error {
 	return err
 }
 
+// UpdateUserName changes the display name for an existing user ID.
+// Keeping the same ID means old votes still belong to the same person.
+func UpdateUserName(userID string, name string) (user.User, error) {
+	var updatedUser user.User
+
+	err := database.DB.QueryRow(
+		"UPDATE users SET name = $1 WHERE id = $2 RETURNING id, name",
+		name,
+		userID,
+	).Scan(&updatedUser.ID, &updatedUser.Name)
+
+	return updatedUser, err
+}
+
 // SaveVote stores a valid vote in PostgreSQL after the poll accepts it.
 // The votes table stores the vote owner, and vote_movies stores the selected movies.
 func SaveVote(vote vote.Vote) error {

@@ -37,6 +37,10 @@ export type CreateUserPayload = {
   name: string;
 };
 
+export type UpdateUserPayload = {
+  name: string;
+};
+
 export type SubmitVotePayload = {
   pollCode: string;
   userId: string;
@@ -123,6 +127,13 @@ export const apiClient = {
   createUser: (payload: CreateUserPayload) =>
     request<User>('/users', {
       method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  // updateUserName changes display text while keeping the same backend user ID.
+  updateUserName: (userId: string, payload: UpdateUserPayload) =>
+    request<User>('/users/' + encodeURIComponent(userId), {
+      method: 'PATCH',
       body: JSON.stringify(payload),
     }),
 

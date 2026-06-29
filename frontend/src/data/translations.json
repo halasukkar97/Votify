@@ -100,7 +100,9 @@
     "name.update": "Update your name",
     "name.current": "Current name",
     "name.updateButton": "Update name",
-    "name.cancel": "Cancel"
+    "name.cancel": "Cancel",
+    "name.saving": "Saving...",
+    "name.updateError": "Could not update your name. Please try again."
   },
   "de": {
     "app.brand": "Votify",
@@ -203,6 +205,8 @@
     "name.update": "Namen aktualisieren",
     "name.current": "Aktueller Name",
     "name.updateButton": "Namen aktualisieren",
-    "name.cancel": "Abbrechen"
+    "name.cancel": "Abbrechen",
+    "name.saving": "Wird gespeichert...",
+    "name.updateError": "Dein Name konnte nicht aktualisiert werden. Bitte versuche es erneut."
   }
 }

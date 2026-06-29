@@ -8,6 +8,8 @@ export function HomePage({
   draftName,
   isEditingName,
   isInitialNameEntry,
+  isSavingName,
+  nameError,
   onCancelNameEdit,
   onDraftNameChange,
   onSaveName,
@@ -15,7 +17,7 @@ export function HomePage({
 }: HomePageProps) {
   usePageTitle('Home');
   // saveName sends the trimmed name up to App so it can be shared in the header.
-  function saveName(event: NameFormSubmitEvent) {
+  async function saveName(event: NameFormSubmitEvent) {
     event.preventDefault();
 
     const trimmedName = draftName.trim();
@@ -23,7 +25,7 @@ export function HomePage({
       return;
     }
 
-    onSaveName(trimmedName);
+    await onSaveName(trimmedName);
   }
 
   if (isEditingName) {
@@ -42,13 +44,16 @@ export function HomePage({
               autoFocus
             />
           </label>
+          {nameError ? <p className="form-error">{nameError}</p> : null}
           <div className="name-form-actions">
             {!isInitialNameEntry ? (
-              <button type="button" className="secondary-button" onClick={onCancelNameEdit}>
+              <button type="button" className="secondary-button" onClick={onCancelNameEdit} disabled={isSavingName}>
                 {t('name.cancel')}
               </button>
             ) : null}
-            <button type="submit">{t(isInitialNameEntry ? 'name.button' : 'name.updateButton')}</button>
+            <button type="submit" disabled={isSavingName}>
+              {isSavingName ? t('name.saving') : t(isInitialNameEntry ? 'name.button' : 'name.updateButton')}
+            </button>
           </div>
         </form>
       </section>

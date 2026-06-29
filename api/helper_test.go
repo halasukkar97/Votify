@@ -149,6 +149,29 @@ func TestSaveUserWritesUserToDatabase(t *testing.T) {
 	requireExpectations(t, mock)
 }
 
+func TestUpdateUserNameKeepsUserID(t *testing.T) {
+	_, mock := newMockDatabase(t)
+
+	mock.ExpectQuery("UPDATE users SET name").
+		WithArgs("New Hela", "user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow("user-1", "New Hela"))
+
+	updatedUser, err := UpdateUserName("user-1", "New Hela")
+	if err != nil {
+		t.Fatalf("expected UpdateUserName to succeed, got %v", err)
+	}
+
+	if updatedUser.ID != "user-1" {
+		t.Fatalf("expected user ID to stay user-1, got %q", updatedUser.ID)
+	}
+
+	if updatedUser.Name != "New Hela" {
+		t.Fatalf("expected updated name, got %q", updatedUser.Name)
+	}
+
+	requireExpectations(t, mock)
+}
+
 func TestSaveVoteCommitsVoteAndSelectedMovies(t *testing.T) {
 	_, mock := newMockDatabase(t)
 	v := vote.Vote{

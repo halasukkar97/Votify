@@ -33,6 +33,7 @@ func main() {
 	http.HandleFunc("/", MovieVoteHandler)
 	http.HandleFunc("/polls", api.PollsHandler)
 	http.HandleFunc("/users", api.UsersHandler)
+	http.HandleFunc("/users/", api.UserByIDHandler)
 	http.HandleFunc("/movies", api.MoviesHandler)
 	http.HandleFunc("/votes", api.CreateVoteHandler)
 	http.HandleFunc("/results", api.ResultsHandler)

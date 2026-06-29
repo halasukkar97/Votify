@@ -374,6 +374,38 @@ func TestListUsersHandlerReturnsUsers(t *testing.T) {
 	requireExpectations(t, mock)
 }
 
+func TestUpdateUserHandlerRenamesExistingUser(t *testing.T) {
+	_, mock := newMockDatabase(t)
+
+	mock.ExpectQuery("UPDATE users SET name").
+		WithArgs("New Hela", "user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow("user-1", "New Hela"))
+
+	request := httptest.NewRequest(http.MethodPatch, "/users/user-1", bytes.NewBufferString(`{"name":"New Hela"}`))
+	response := httptest.NewRecorder()
+
+	UpdateUserHandler(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d with body %q", response.Code, response.Body.String())
+	}
+
+	var updatedUser CreateUserResponse
+	if err := json.NewDecoder(response.Body).Decode(&updatedUser); err != nil {
+		t.Fatalf("failed to decode user response: %v", err)
+	}
+
+	if updatedUser.ID != "user-1" {
+		t.Fatalf("expected user ID to stay user-1, got %q", updatedUser.ID)
+	}
+
+	if updatedUser.Name != "New Hela" {
+		t.Fatalf("expected updated name, got %q", updatedUser.Name)
+	}
+
+	requireExpectations(t, mock)
+}
+
 func TestUsersHandlerRejectsUnsupportedMethods(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPatch, "/users", nil)
 	response := httptest.NewRecorder()

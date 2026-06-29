@@ -30,7 +30,6 @@ const initialMovieSearch: MovieSearchState = {
 const toastDurationMs = 30000;
 const userNameStorageKey = 'votify:userName';
 const userIDStorageKey = 'votify:userId';
-const userIDNameStorageKey = 'votify:userIdName';
 
 function hasVotingEnded(deadline: string, isClosed: boolean) {
   return isClosed || (deadline ? new Date(deadline).getTime() < Date.now() : false);
@@ -79,11 +78,7 @@ export function PollPage({ t }: PollPageProps) {
   const [movieSearch, setMovieSearch] = useState<MovieSearchState>(initialMovieSearch);
   const [isAddingMovie, setIsAddingMovie] = useState(false);
   const [selectedMovieIds, setSelectedMovieIds] = useState<string[]>([]);
-  const [currentUserId, setCurrentUserId] = useState(() => {
-    const savedName = localStorage.getItem(userNameStorageKey) ?? '';
-    const userIDName = localStorage.getItem(userIDNameStorageKey) ?? '';
-    return savedName && savedName === userIDName ? localStorage.getItem(userIDStorageKey) ?? '' : '';
-  });
+  const [currentUserId, setCurrentUserId] = useState(() => localStorage.getItem(userIDStorageKey) ?? '');
   const [voteLimitMessage, setVoteLimitMessage] = useState('');
   const [pollResults, setPollResults] = useState<PollResults>({});
   const [isVoteConfirmOpen, setIsVoteConfirmOpen] = useState(false);
@@ -151,15 +146,13 @@ export function PollPage({ t }: PollPageProps) {
       }
 
       const savedName = localStorage.getItem(userNameStorageKey)?.trim();
-      const userIDName = localStorage.getItem(userIDNameStorageKey) ?? '';
-      if (!savedName || savedName === userIDName) {
+      if (!savedName) {
         return;
       }
 
       try {
         const user = await apiClient.createUser({ name: savedName });
         localStorage.setItem(userIDStorageKey, user.id);
-        localStorage.setItem(userIDNameStorageKey, savedName);
         setCurrentUserId(user.id);
       } catch {
         setCurrentUserId('');
@@ -258,7 +251,6 @@ export function PollPage({ t }: PollPageProps) {
 
     const user = await apiClient.createUser({ name: savedName });
     localStorage.setItem(userIDStorageKey, user.id);
-    localStorage.setItem(userIDNameStorageKey, savedName);
     setCurrentUserId(user.id);
     return user.id;
   }

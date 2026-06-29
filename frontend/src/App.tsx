@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { apiClient } from './api/client';
 import { useTranslations } from './i18n/useTranslations';
 import type { Language } from './i18n/useTranslations';
 import { Breadcrumbs } from './components/Breadcrumbs';
@@ -11,6 +12,7 @@ import { PollPage } from './pages/Poll';
 import { PollResultsPage } from './pages/PollResults';
 
 const USER_NAME_STORAGE_KEY = 'votify:userName';
+const USER_ID_STORAGE_KEY = 'votify:userId';
 
 export default function App() {
   const navigate = useNavigate();
@@ -22,6 +24,8 @@ export default function App() {
   const [draftName, setDraftName] = useState(savedName);
   const [isEditingName, setIsEditingName] = useState(savedName.length === 0);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
   const isInitialNameEntry = savedName.length === 0;
   const isNameFormVisible = isInitialNameEntry || isEditingName;
 
@@ -33,16 +37,33 @@ export default function App() {
   ];
 
   // saveName writes the current name to localStorage for future visits.
-  function saveName(nextName: string) {
-    localStorage.setItem(USER_NAME_STORAGE_KEY, nextName);
-    setSavedName(nextName);
-    setDraftName(nextName);
-    setIsEditingName(false);
+  async function saveName(nextName: string) {
+    const savedUserID = localStorage.getItem(USER_ID_STORAGE_KEY) ?? '';
+    setNameError('');
+
+    try {
+      setIsSavingName(true);
+
+      // If a backend user already exists, rename it instead of creating a new voter identity.
+      if (savedUserID && nextName !== savedName) {
+        await apiClient.updateUserName(savedUserID, { name: nextName });
+      }
+
+      localStorage.setItem(USER_NAME_STORAGE_KEY, nextName);
+      setSavedName(nextName);
+      setDraftName(nextName);
+      setIsEditingName(false);
+    } catch {
+      setNameError(t('name.updateError'));
+    } finally {
+      setIsSavingName(false);
+    }
   }
 
   // startEditingName sends the user back home so the focused name form is visible.
   function startEditingName() {
     setDraftName(savedName);
+    setNameError('');
     setIsEditingName(true);
     navigate('/');
   }
@@ -50,6 +71,7 @@ export default function App() {
   // cancelNameEdit restores the saved value without replacing the current user name.
   function cancelNameEdit() {
     setDraftName(savedName);
+    setNameError('');
     setIsEditingName(false);
   }
 
@@ -136,6 +158,8 @@ export default function App() {
                 draftName={draftName}
                 isEditingName={isNameFormVisible}
                 isInitialNameEntry={isInitialNameEntry}
+                isSavingName={isSavingName}
+                nameError={nameError}
                 onCancelNameEdit={cancelNameEdit}
                 onDraftNameChange={setDraftName}
                 onSaveName={saveName}
