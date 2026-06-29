@@ -7,6 +7,8 @@ import (
 	"votify/internal/api"
 	"votify/internal/config"
 	"votify/internal/database"
+	"votify/internal/repository"
+	"votify/internal/service"
 )
 
 // main is the first function Go runs when the application starts.
@@ -16,25 +18,31 @@ func main() {
 
 	cfg := config.Load()
 
-	err := database.Connect(cfg.DatabaseURL)
+	db, err := database.Connect(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println("Database connected!")
 
+	store := repository.NewStore(db)
+	appService := service.New(store)
+	server := api.NewServer(appService, cfg.TMDBAPIKey)
+
 	// http.HandleFunc connects a URL path to the function that should handle it.
 	http.HandleFunc("/", MovieVoteHandler)
-	http.HandleFunc("/polls", api.PollsHandler)
-	http.HandleFunc("/users", api.UsersHandler)
-	http.HandleFunc("/users/", api.UserByIDHandler)
-	http.HandleFunc("/movies", api.MoviesHandler)
-	http.HandleFunc("/votes", api.CreateVoteHandler)
-	http.HandleFunc("/results", api.ResultsHandler)
-	http.HandleFunc("/movies/search", api.SearchMoviesHandler)
-	http.HandleFunc("/polls/", api.PollByIDHandler)
+	http.HandleFunc("/polls", server.PollsHandler)
+	http.HandleFunc("/users", server.UsersHandler)
+	http.HandleFunc("/users/", server.UserByIDHandler)
+	http.HandleFunc("/movies", server.MoviesHandler)
+	http.HandleFunc("/votes", server.CreateVoteHandler)
+	http.HandleFunc("/results", server.ResultsHandler)
+	http.HandleFunc("/movies/search", server.SearchMoviesHandler)
+	http.HandleFunc("/polls/", server.PollByIDHandler)
 
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, enableCORS(http.DefaultServeMux, cfg.AllowedOrigins)))
+	handler := recoverPanic(logRequests(enableCORS(http.DefaultServeMux, cfg.AllowedOrigins)))
+
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, handler))
 }
 
 // MovieVoteHandler handles the root route and returns a simple health message.
@@ -60,6 +68,28 @@ func enableCORS(next http.Handler, allowedOrigins map[string]bool) http.Handler 
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// logRequests records one line for each HTTP request.
+func logRequests(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s", r.Method, r.URL.Path)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// recoverPanic keeps an unexpected panic from crashing the server process.
+func recoverPanic(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("panic while handling %s %s: %v", r.Method, r.URL.Path, err)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+			}
+		}()
 
 		next.ServeHTTP(w, r)
 	})

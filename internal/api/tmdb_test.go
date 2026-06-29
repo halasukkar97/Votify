@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 )
@@ -39,8 +38,6 @@ func withMockTMDB(t *testing.T, fn func(*http.Request) string) {
 }
 
 func TestSearchMoviesEscapesQueryAndAddsPosterURL(t *testing.T) {
-	t.Setenv("TMDB_API_KEY", "test-key")
-
 	withMockTMDB(t, func(r *http.Request) string {
 		if r.URL.Query().Get("query") != "star wars & dune" {
 			t.Fatalf("expected decoded query to match original search text, got %q", r.URL.Query().Get("query"))
@@ -57,7 +54,7 @@ func TestSearchMoviesEscapesQueryAndAddsPosterURL(t *testing.T) {
 		return `{"page":1,"results":[{"id":11,"title":"Dune","release_date":"2021-10-22","overview":"Desert politics","poster_path":"/poster.jpg"}]}`
 	})
 
-	movies, err := SearchMovies("star wars & dune")
+	movies, err := SearchMovies("star wars & dune", "test-key")
 	if err != nil {
 		t.Fatalf("expected SearchMovies to succeed, got %v", err)
 	}
@@ -83,10 +80,7 @@ func TestSearchMoviesHandlerRequiresQuery(t *testing.T) {
 }
 
 func TestSearchMoviesHandlerReturnsTMDBResults(t *testing.T) {
-	os.Setenv("TMDB_API_KEY", "test-key")
-	t.Cleanup(func() {
-		os.Unsetenv("TMDB_API_KEY")
-	})
+	t.Setenv("TMDB_API_KEY", "test-key")
 
 	withMockTMDB(t, func(r *http.Request) string {
 		return `{"page":1,"results":[{"id":22,"title":"Arrival","release_date":"2016-11-11","overview":"First contact","poster_path":"/arrival.jpg"}]}`

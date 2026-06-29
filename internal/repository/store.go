@@ -1,4 +1,4 @@
-package database
+package repository
 
 import (
 	"database/sql"
@@ -6,10 +6,21 @@ import (
 	"votify/internal/domain"
 )
 
+// Store groups PostgreSQL repositories behind one small dependency.
+// Each method owns SQL for one persistence operation.
+type Store struct {
+	DB *sql.DB
+}
+
+// NewStore creates a repository store backed by the provided database connection.
+func NewStore(db *sql.DB) *Store {
+	return &Store{DB: db}
+}
+
 // FindPollByID searches for a poll by the internal UUID.
 // This ID is mainly for the database and backend relations.
-func FindPollByID(pollID string) (*domain.Poll, bool) {
-	foundPoll, found, err := FindPollByIDWithError(pollID)
+func (store *Store) FindPollByID(pollID string) (*domain.Poll, bool) {
+	foundPoll, found, err := store.FindPollByIDWithError(pollID)
 	if err != nil {
 		log.Printf("FindPollByID failed for identifier %q: %v", pollID, err)
 	}
@@ -19,8 +30,8 @@ func FindPollByID(pollID string) (*domain.Poll, bool) {
 
 // FindPollByCode searches for a poll by the public 8-digit poll code.
 // This is the code users will type when they join a poll.
-func FindPollByCode(pollCode string) (*domain.Poll, bool) {
-	foundPoll, found, err := FindPollByCodeWithError(pollCode)
+func (store *Store) FindPollByCode(pollCode string) (*domain.Poll, bool) {
+	foundPoll, found, err := store.FindPollByCodeWithError(pollCode)
 	if err != nil {
 		log.Printf("FindPollByCode failed for identifier %q: %v", pollCode, err)
 	}
@@ -29,8 +40,8 @@ func FindPollByCode(pollCode string) (*domain.Poll, bool) {
 }
 
 // FindPollByIDWithError searches by internal UUID and returns the database error to callers that need it.
-func FindPollByIDWithError(pollID string) (*domain.Poll, bool, error) {
-	return findPollByQuery(
+func (store *Store) FindPollByIDWithError(pollID string) (*domain.Poll, bool, error) {
+	return store.findPollByQuery(
 		`SELECT id, COALESCE(poll_code, '') AS poll_code, name, is_closed, is_voting_active, max_votes_per_person, deadline
 		FROM polls
 		WHERE id = $1`,
@@ -39,8 +50,8 @@ func FindPollByIDWithError(pollID string) (*domain.Poll, bool, error) {
 }
 
 // FindPollByCodeWithError searches by public poll code and returns the database error to callers that need it.
-func FindPollByCodeWithError(pollCode string) (*domain.Poll, bool, error) {
-	return findPollByQuery(
+func (store *Store) FindPollByCodeWithError(pollCode string) (*domain.Poll, bool, error) {
+	return store.findPollByQuery(
 		`SELECT id, COALESCE(poll_code, '') AS poll_code, name, is_closed, is_voting_active, max_votes_per_person, deadline
 		FROM polls
 		WHERE poll_code = $1`,
@@ -49,12 +60,12 @@ func FindPollByCodeWithError(pollCode string) (*domain.Poll, bool, error) {
 }
 
 // findPollByQuery loads a poll using one of the fixed poll lookup queries.
-func findPollByQuery(query string, value string) (*domain.Poll, bool, error) {
+func (store *Store) findPollByQuery(query string, value string) (*domain.Poll, bool, error) {
 	var foundPoll domain.Poll
 
 	// QueryRow expects one row back. Scan copies each selected database column
 	// into the matching field on foundPoll.
-	err := DB.QueryRow(query, value).Scan(
+	err := store.DB.QueryRow(query, value).Scan(
 		&foundPoll.ID,
 		&foundPoll.PollCode,
 		&foundPoll.Name,
@@ -73,12 +84,12 @@ func findPollByQuery(query string, value string) (*domain.Poll, bool, error) {
 	}
 
 	// A single poll response should include its related movies and votes.
-	movies, err := GetMoviesByPollID(foundPoll.ID)
+	movies, err := store.GetMoviesByPollID(foundPoll.ID)
 	if err != nil {
 		return nil, false, err
 	}
 
-	votes, err := GetVotesByPollID(foundPoll.ID)
+	votes, err := store.GetVotesByPollID(foundPoll.ID)
 	if err != nil {
 		return nil, false, err
 	}
@@ -91,8 +102,8 @@ func findPollByQuery(query string, value string) (*domain.Poll, bool, error) {
 
 // SavePoll stores a newly created poll in PostgreSQL.
 // We store both the internal UUID and the public poll code.
-func SavePoll(poll domain.Poll) error {
-	_, err := DB.Exec(
+func (store *Store) SavePoll(poll domain.Poll) error {
+	_, err := store.DB.Exec(
 		`INSERT INTO polls
 		(id, poll_code, name, is_closed, is_voting_active, max_votes_per_person, deadline)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -109,8 +120,8 @@ func SavePoll(poll domain.Poll) error {
 }
 
 // ActivateVoting starts the voting phase for a poll identified by its public code.
-func ActivateVoting(pollCode string) error {
-	_, err := DB.Exec(
+func (store *Store) ActivateVoting(pollCode string) error {
+	_, err := store.DB.Exec(
 		"UPDATE polls SET is_voting_active = TRUE WHERE poll_code = $1",
 		pollCode,
 	)
@@ -120,10 +131,10 @@ func ActivateVoting(pollCode string) error {
 
 // PollCodeExists checks if a public 8-digit poll code is already used.
 // This prevents two polls from getting the same join code.
-func PollCodeExists(pollCode string) (bool, error) {
+func (store *Store) PollCodeExists(pollCode string) (bool, error) {
 	var exists bool
 
-	err := DB.QueryRow(
+	err := store.DB.QueryRow(
 		"SELECT EXISTS(SELECT 1 FROM polls WHERE poll_code = $1)",
 		pollCode,
 	).Scan(&exists)
@@ -137,8 +148,8 @@ func PollCodeExists(pollCode string) (bool, error) {
 
 // SaveMovie stores a newly created movie in PostgreSQL.
 // Returning an error lets the HTTP handler report database save failures.
-func SaveMovie(movie domain.Movie) error {
-	_, err := DB.Exec(
+func (store *Store) SaveMovie(movie domain.Movie) error {
+	_, err := store.DB.Exec(
 		`INSERT INTO movies
 		(id, poll_id, title, release_year, description, poster_url)
 		VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -155,8 +166,8 @@ func SaveMovie(movie domain.Movie) error {
 
 // SaveUser stores a newly created user in PostgreSQL.
 // Returning an error lets the HTTP handler send a clear failure response.
-func SaveUser(user domain.User) error {
-	_, err := DB.Exec(
+func (store *Store) SaveUser(user domain.User) error {
+	_, err := store.DB.Exec(
 		"INSERT INTO users (id, name) VALUES ($1, $2)",
 		user.ID,
 		user.Name,
@@ -167,10 +178,10 @@ func SaveUser(user domain.User) error {
 
 // UpdateUserName changes the display name for an existing user ID.
 // Keeping the same ID means old votes still belong to the same person.
-func UpdateUserName(userID string, name string) (domain.User, error) {
+func (store *Store) UpdateUserName(userID string, name string) (domain.User, error) {
 	var updatedUser domain.User
 
-	err := DB.QueryRow(
+	err := store.DB.QueryRow(
 		"UPDATE users SET name = $1 WHERE id = $2 RETURNING id, name",
 		name,
 		userID,
@@ -181,10 +192,10 @@ func UpdateUserName(userID string, name string) (domain.User, error) {
 
 // SaveVote stores a valid vote in PostgreSQL after the poll accepts it.
 // The votes table stores the vote owner, and vote_movies stores the selected movies.
-func SaveVote(vote domain.Vote) error {
+func (store *Store) SaveVote(vote domain.Vote) error {
 	// A transaction keeps the vote and its movie selections together.
 	// If any insert fails, Rollback cancels everything from this SaveVote call.
-	tx, err := DB.Begin()
+	tx, err := store.DB.Begin()
 	if err != nil {
 		return err
 	}
@@ -221,10 +232,10 @@ func SaveVote(vote domain.Vote) error {
 
 // PollExists checks PostgreSQL for a poll ID without loading the full poll.
 // SELECT EXISTS returns one true/false value, which is cheaper than reading every column.
-func PollExists(pollID string) (bool, error) {
+func (store *Store) PollExists(pollID string) (bool, error) {
 	var exists bool
 
-	err := DB.QueryRow(
+	err := store.DB.QueryRow(
 		"SELECT EXISTS(SELECT 1 FROM polls WHERE id = $1)",
 		pollID,
 	).Scan(&exists)
@@ -238,9 +249,9 @@ func PollExists(pollID string) (bool, error) {
 
 // GetMovieIDsByVoteID reads the selected movie IDs for one vote.
 // Votes and movies are connected through the vote_movies join table.
-func GetMovieIDsByVoteID(voteID string) ([]string, error) {
+func (store *Store) GetMovieIDsByVoteID(voteID string) ([]string, error) {
 	// Each row contains one movie selected by this vote.
-	rows, err := DB.Query(
+	rows, err := store.DB.Query(
 		"SELECT movie_id FROM vote_movies WHERE vote_id = $1",
 		voteID,
 	)
@@ -274,9 +285,9 @@ func GetMovieIDsByVoteID(voteID string) ([]string, error) {
 
 // GetAllPolls reads every poll row from PostgreSQL and converts each row into a domain.Poll.
 // It also loads each poll's movies and votes so clients can see the full poll state.
-func GetAllPolls() ([]domain.Poll, error) {
+func (store *Store) GetAllPolls() ([]domain.Poll, error) {
 	// Query returns rows, which must be scanned one at a time.
-	rows, err := DB.Query(
+	rows, err := store.DB.Query(
 		"SELECT id, COALESCE(poll_code, '') AS poll_code, name, is_closed, is_voting_active, max_votes_per_person, deadline FROM polls",
 	)
 
@@ -308,7 +319,7 @@ func GetAllPolls() ([]domain.Poll, error) {
 		}
 
 		// Load the movies connected to this poll before adding it to the response list.
-		movies, err := GetMoviesByPollID(currentPoll.ID)
+		movies, err := store.GetMoviesByPollID(currentPoll.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -316,7 +327,7 @@ func GetAllPolls() ([]domain.Poll, error) {
 		currentPoll.Movies = movies
 
 		// Load the votes connected to this poll, including the selected movie IDs.
-		votes, err := GetVotesByPollID(currentPoll.ID)
+		votes, err := store.GetVotesByPollID(currentPoll.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -334,37 +345,37 @@ func GetAllPolls() ([]domain.Poll, error) {
 }
 
 // GetAllMovies reads every movie row from PostgreSQL and converts each row into a domain.Movie.
-func GetAllMovies() ([]domain.Movie, error) {
+func (store *Store) GetAllMovies() ([]domain.Movie, error) {
 	// Query returns rows, which must be scanned one at a time.
-	rows, err := DB.Query(
+	rows, err := store.DB.Query(
 		"SELECT id, poll_id, title, release_year, description, COALESCE(poster_url, '') AS poster_url FROM movies",
 	)
 
 	if err != nil {
-		rows, err = DB.Query(
+		rows, err = store.DB.Query(
 			"SELECT id, poll_id, title, release_year, description FROM movies",
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		return scanMovieRows(rows, false)
+		return store.scanMovieRows(rows, false)
 	}
 
-	return scanMovieRows(rows, true)
+	return store.scanMovieRows(rows, true)
 }
 
 // GetMoviesByPollID reads only the movies that belong to one poll.
 // Poll listing uses this to include each poll's movie options in the response.
-func GetMoviesByPollID(pollID string) ([]domain.Movie, error) {
+func (store *Store) GetMoviesByPollID(pollID string) ([]domain.Movie, error) {
 	// The WHERE clause filters the movies table down to the requested poll ID.
-	rows, err := DB.Query(
+	rows, err := store.DB.Query(
 		"SELECT id, poll_id, title, release_year, description, COALESCE(poster_url, '') AS poster_url FROM movies WHERE poll_id = $1",
 		pollID,
 	)
 
 	if err != nil {
-		rows, err = DB.Query(
+		rows, err = store.DB.Query(
 			"SELECT id, poll_id, title, release_year, description FROM movies WHERE poll_id = $1",
 			pollID,
 		)
@@ -372,13 +383,13 @@ func GetMoviesByPollID(pollID string) ([]domain.Movie, error) {
 			return nil, err
 		}
 
-		return scanMovieRows(rows, false)
+		return store.scanMovieRows(rows, false)
 	}
 
-	return scanMovieRows(rows, true)
+	return store.scanMovieRows(rows, true)
 }
 
-func scanMovieRows(rows *sql.Rows, hasPosterURL bool) ([]domain.Movie, error) {
+func (store *Store) scanMovieRows(rows *sql.Rows, hasPosterURL bool) ([]domain.Movie, error) {
 	defer rows.Close()
 
 	movies := make([]domain.Movie, 0)
@@ -423,9 +434,9 @@ func scanMovieRows(rows *sql.Rows, hasPosterURL bool) ([]domain.Movie, error) {
 
 // GetVotesByPollID reads all votes submitted for one poll.
 // It also loads each vote's selected movie IDs from the vote_movies table.
-func GetVotesByPollID(pollID string) ([]domain.Vote, error) {
+func (store *Store) GetVotesByPollID(pollID string) ([]domain.Vote, error) {
 	// First load the vote rows for this poll.
-	rows, err := DB.Query(
+	rows, err := store.DB.Query(
 		"SELECT id, poll_id, user_id FROM votes WHERE poll_id = $1",
 		pollID,
 	)
@@ -453,7 +464,7 @@ func GetVotesByPollID(pollID string) ([]domain.Vote, error) {
 		}
 
 		// The selected movies live in the vote_movies join table.
-		movieIDs, err := GetMovieIDsByVoteID(currentVote.ID)
+		movieIDs, err := store.GetMovieIDsByVoteID(currentVote.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -470,9 +481,9 @@ func GetVotesByPollID(pollID string) ([]domain.Vote, error) {
 }
 
 // GetAllUsers reads every user row from PostgreSQL and converts each row into a domain.User.
-func GetAllUsers() ([]domain.User, error) {
+func (store *Store) GetAllUsers() ([]domain.User, error) {
 
-	rows, err := DB.Query(
+	rows, err := store.DB.Query(
 		"SELECT id, name FROM users",
 	)
 

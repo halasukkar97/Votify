@@ -1,16 +1,10 @@
 package api
 
 import (
-	"crypto/rand"
 	"encoding/json"
-	"fmt"
-	"log"
-	"math/big"
 	"net/http"
 	"strings"
 	"time"
-	"votify/internal/database"
-	"votify/internal/domain"
 )
 
 // CreatePollRequest is the JSON body clients send when they create a poll.
@@ -33,39 +27,22 @@ type CreatePollResponse struct {
 
 // CreatePollHandler handles POST /polls.
 // It reads JSON from the request, creates a poll model, stores it, and returns it.
-func CreatePollHandler(w http.ResponseWriter, r *http.Request) {
+func (server *Server) CreatePollHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreatePollRequest
 
 	// Decode turns the incoming JSON request body into a Go struct.
 	decodeErr := json.NewDecoder(r.Body).Decode(&req)
 	if decodeErr != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
-
 		return
 	}
 
-	pollCode, err := GenerateUniquePollCode()
+	createdPoll, err := server.Service.CreatePoll(req.Name, req.MaxVotesPerPerson, req.Deadline)
 	if err != nil {
-		http.Error(w, "failed to generate poll code", http.StatusInternalServerError)
+		writeServiceError(w, err, "failed to save poll")
 		return
 	}
 
-	// The poll package owns the rules for building a new poll.
-	createdPoll := domain.CreateNewPoll(domain.CreatePollInput{
-		PollCode:          pollCode,
-		Name:              req.Name,
-		MaxVotesPerPerson: req.MaxVotesPerPerson,
-		Deadline:          req.Deadline,
-	})
-
-	// Save the poll in PostgreSQL so later requests can list or find it.
-	err = database.SavePoll(createdPoll)
-	if err != nil {
-		http.Error(w, "failed to save poll", http.StatusInternalServerError)
-		return
-	}
-
-	// Only expose the fields the API should return to the client.
 	response := CreatePollResponse{
 		ID:                createdPoll.ID,
 		PollCode:          createdPoll.PollCode,
@@ -76,29 +53,20 @@ func CreatePollHandler(w http.ResponseWriter, r *http.Request) {
 		Deadline:          createdPoll.Deadline,
 	}
 
-	// StatusCreated means the request succeeded and created a new resource.
-	w.WriteHeader(http.StatusCreated)
-
-	// Encode writes the Go response struct back to the client as JSON.
-	encodeErr := json.NewEncoder(w).Encode(response)
-	if encodeErr != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-
-		return
-	}
+	writeJSON(w, http.StatusCreated, response)
 }
 
 // PollsHandler routes /polls requests by HTTP method.
-func PollsHandler(w http.ResponseWriter, r *http.Request) {
+func (server *Server) PollsHandler(w http.ResponseWriter, r *http.Request) {
 	// POST /polls creates a new poll.
 	if r.Method == http.MethodPost {
-		CreatePollHandler(w, r)
+		server.CreatePollHandler(w, r)
 		return
 	}
 
 	// GET /polls lists the polls stored in PostgreSQL.
 	if r.Method == http.MethodGet {
-		ListPollsHandler(w, r)
+		server.ListPollsHandler(w, r)
 		return
 	}
 
@@ -108,135 +76,86 @@ func PollsHandler(w http.ResponseWriter, r *http.Request) {
 
 // ResultsHandler handles GET /results?pollCode=...
 // It finds the requested poll and returns vote totals keyed by movie ID.
-func ResultsHandler(w http.ResponseWriter, r *http.Request) {
+func (server *Server) ResultsHandler(w http.ResponseWriter, r *http.Request) {
 	// Query parameters come from the URL after the question mark.
 	pollCode := r.URL.Query().Get("pollCode")
 	pollID := r.URL.Query().Get("pollId")
 
-	var foundPoll *domain.Poll
-	var found bool
-
-	if pollCode != "" {
-		foundPoll, found = database.FindPollByCode(pollCode)
-	}
-	if !found && pollID != "" {
-		foundPoll, found = database.FindPollByID(pollID)
-	}
-
-	if !found {
-		http.Error(w, "poll not found", http.StatusNotFound)
-		return
-	}
-
-	results := foundPoll.GetResults()
-
-	err := json.NewEncoder(w).Encode(results)
+	results, err := server.Service.GetResults(pollCode, pollID)
 	if err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		writeServiceError(w, err, "poll not found")
 		return
 	}
+
+	writeJSON(w, http.StatusOK, results)
 }
 
 // ListPollsHandler handles GET /polls.
-func ListPollsHandler(w http.ResponseWriter, r *http.Request) {
-	// Load all stored polls before encoding them as JSON.
-	polls, err := database.GetAllPolls()
-
+func (server *Server) ListPollsHandler(w http.ResponseWriter, r *http.Request) {
+	polls, err := server.Service.ListPolls()
 	if err != nil {
-		log.Printf("failed to load polls: %v", err)
-		http.Error(w, "failed to load polls", http.StatusInternalServerError)
+		writeServiceError(w, err, "failed to load polls")
 		return
 	}
 
-	json.NewEncoder(w).Encode(polls)
+	writeJSON(w, http.StatusOK, polls)
 }
 
 // PollByIDHandler handles GET /polls/{id}.
 // It extracts the ID from the URL path, loads that poll, and returns it as JSON.
-func PollByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (server *Server) PollByIDHandler(w http.ResponseWriter, r *http.Request) {
 	pollIdentifier := strings.TrimPrefix(r.URL.Path, "/polls/")
 
 	if strings.HasSuffix(pollIdentifier, "/activate-voting") {
-		ActivateVotingHandler(w, r, strings.TrimSuffix(pollIdentifier, "/activate-voting"))
+		server.ActivateVotingHandler(w, r, strings.TrimSuffix(pollIdentifier, "/activate-voting"))
 		return
 	}
 
-	foundPoll, found, codeErr := database.FindPollByCodeWithError(pollIdentifier)
-	if !found {
-		var idErr error
-		foundPoll, found, idErr = database.FindPollByIDWithError(pollIdentifier)
-		if !found {
-			log.Printf("poll not found for identifier %q: pollCodeErr=%v pollIDErr=%v", pollIdentifier, codeErr, idErr)
-		}
-	}
-
-	if !found {
-		http.Error(w, "poll not found", http.StatusNotFound)
-		return
-	}
-
-	// Encode writes the full poll, including loaded movies and votes, as JSON.
-	err := json.NewEncoder(w).Encode(foundPoll)
+	foundPoll, err := server.Service.GetPoll(pollIdentifier)
 	if err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		writeServiceError(w, err, "poll not found")
 		return
 	}
+
+	writeJSON(w, http.StatusOK, foundPoll)
 }
 
 // ActivateVotingHandler handles PATCH /polls/{pollCode}/activate-voting.
-func ActivateVotingHandler(w http.ResponseWriter, r *http.Request, pollCode string) {
+func (server *Server) ActivateVotingHandler(w http.ResponseWriter, r *http.Request, pollCode string) {
 	if r.Method != http.MethodPatch {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	foundPoll, found := database.FindPollByCode(pollCode)
-	if !found {
-		http.Error(w, "poll not found", http.StatusNotFound)
-		return
-	}
-
-	if foundPoll.IsVotingActive {
-		http.Error(w, "voting is already active", http.StatusConflict)
-		return
-	}
-
-	// Activating voting locks the setup phase so no more movies can be added.
-	err := database.ActivateVoting(pollCode)
+	updatedPoll, err := server.Service.ActivateVoting(pollCode)
 	if err != nil {
-		http.Error(w, "failed to activate voting", http.StatusInternalServerError)
+		writeServiceError(w, err, "failed to activate voting")
 		return
 	}
 
-	updatedPoll, found := database.FindPollByCode(pollCode)
-	if !found {
-		http.Error(w, "poll not found", http.StatusNotFound)
-		return
-	}
-
-	err = json.NewEncoder(w).Encode(updatedPoll)
-	if err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	writeJSON(w, http.StatusOK, updatedPoll)
 }
 
-func GenerateUniquePollCode() (string, error) {
-	for {
-		number, err := rand.Int(rand.Reader, big.NewInt(100000000))
-		if err != nil {
-			return "", err
-		}
+func CreatePollHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().CreatePollHandler(w, r)
+}
 
-		code := fmt.Sprintf("%08d", number.Int64())
+func PollsHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().PollsHandler(w, r)
+}
 
-		exists, err := database.PollCodeExists(code)
-		if err != nil {
-			return "", err
-		}
+func ResultsHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().ResultsHandler(w, r)
+}
 
-		if !exists {
-			return code, nil
-		}
-	}
+func ListPollsHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().ListPollsHandler(w, r)
+}
+
+func PollByIDHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().PollByIDHandler(w, r)
+}
+
+func ActivateVotingHandler(w http.ResponseWriter, r *http.Request, pollCode string) {
+	defaultServer().ActivateVotingHandler(w, r, pollCode)
 }

@@ -4,28 +4,21 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="fix: preserve voter identity when updating display name">
+    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="refactor: reorganize Go backend into idiomatic internal packages">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/handler_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/helper.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/helper_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/movie_handler.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/poll_handler.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/tmdb.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/tmdb_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/user_handler.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/vote_handler.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/database.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/main_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/movie/movie.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/movie/movie_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/poll/poll.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/poll/poll_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/user/user.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/user/user_test.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/vote/vote.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/vote/vote_test.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmd/server/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/server/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/handler_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/handler_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/movie_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/movie_handler.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/poll_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/poll_handler.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/tmdb.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/tmdb.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/tmdb_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/tmdb_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/user_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/user_handler.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/vote_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/vote_handler.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/config/config.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/config/config.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/database/database.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/database/database.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/database/doc.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/database/doc.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/database/storage.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/database/storage_test.go" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -199,6 +192,7 @@
     <MESSAGE value="fix(deploy): support Vercel routing and deployed frontend CORS" />
     <MESSAGE value="feat(frontend): improve poll voting layout and selection flow" />
     <MESSAGE value="fix: preserve voter identity when updating display name" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix: preserve voter identity when updating display name" />
+    <MESSAGE value="refactor: reorganize Go backend into idiomatic internal packages" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor: reorganize Go backend into idiomatic internal packages" />
   </component>
 </project>

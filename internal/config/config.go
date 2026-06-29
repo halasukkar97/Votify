@@ -14,6 +14,7 @@ import (
 type Config struct {
 	Port           string
 	DatabaseURL    string
+	TMDBAPIKey     string
 	AllowedOrigins map[string]bool
 }
 
@@ -33,6 +34,7 @@ func Load() Config {
 	return Config{
 		Port:        port,
 		DatabaseURL: os.Getenv("DATABASE_URL"),
+		TMDBAPIKey:  os.Getenv("TMDB_API_KEY"),
 		AllowedOrigins: allowedOriginsFromEnv(
 			os.Getenv("ALLOWED_ORIGINS"),
 			[]string{"http://localhost:5173", "https://votify-six.vercel.app"},

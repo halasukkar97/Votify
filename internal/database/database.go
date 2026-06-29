@@ -6,23 +6,23 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// DB is the shared database connection used by handlers that need PostgreSQL.
-// It is set once by Connect when the application starts.
+// DB is kept as a small compatibility hook for package-level handler wrappers in tests.
+// The production server passes the returned *sql.DB through repositories instead.
 var DB *sql.DB
 
 // Connect opens a PostgreSQL connection and verifies it with Ping.
 // sql.Open prepares the connection, while Ping confirms the database is reachable.
-func Connect(connectionString string) error {
-	var err error
-
-	DB, err = sql.Open(
+func Connect(connectionString string) (*sql.DB, error) {
+	db, err := sql.Open(
 		"postgres",
 		connectionString,
 	)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return DB.Ping()
+	DB = db
+
+	return db, db.Ping()
 }

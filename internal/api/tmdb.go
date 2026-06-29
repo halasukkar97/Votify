@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"os"
 )
 
 // ExternalMovie is the movie shape returned by the TMDB search endpoint.
@@ -26,7 +25,7 @@ type SearchResponse struct {
 
 // SearchMoviesHandler handles GET /movies/search?q=...
 // It reads the search text from the query string and returns matching TMDB movies.
-func SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {
+func (server *Server) SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 
 	if query == "" {
@@ -34,7 +33,7 @@ func SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	movies, err := SearchMovies(query)
+	movies, err := SearchMovies(query, server.TMDBAPIKey)
 	if err != nil {
 		http.Error(w, "failed to search movies", http.StatusInternalServerError)
 		return
@@ -48,9 +47,7 @@ func SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // SearchMovies calls TMDB's movie search API and converts the response into Go structs.
-func SearchMovies(query string) ([]ExternalMovie, error) {
-
-	apiKey := os.Getenv("TMDB_API_KEY")
+func SearchMovies(query string, apiKey string) ([]ExternalMovie, error) {
 	// QueryEscape makes the search text safe to place inside a URL.
 	// For example, "star wars" becomes "star+wars".
 	escapedQuery := url.QueryEscape(query)
@@ -89,4 +86,8 @@ func SearchMovies(query string) ([]ExternalMovie, error) {
 	// Return only the movie results.
 	// The caller doesn't care about page numbers.
 	return searchResponse.Results, nil
+}
+
+func SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().SearchMoviesHandler(w, r)
 }

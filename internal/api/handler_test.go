@@ -11,6 +11,7 @@ import (
 	"time"
 	"votify/internal/database"
 	"votify/internal/domain"
+	"votify/internal/repository"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )
@@ -190,7 +191,7 @@ func TestGetAllPollsHandlesOldRowsWithEmptyPollCode(t *testing.T) {
 
 	expectEmptyRelations(mock, "poll-legacy")
 
-	polls, err := database.GetAllPolls()
+	polls, err := repository.NewStore(database.DB).GetAllPolls()
 	if err != nil {
 		t.Fatalf("expected GetAllPolls to succeed, got %v", err)
 	}
@@ -492,7 +493,7 @@ func TestGetMoviesByPollIDFallsBackWhenPosterColumnIsMissing(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "poll_id", "title", "release_year", "description"}).
 			AddRow("movie-1", "poll-1", "Dune", 2021, "Desert politics"))
 
-	movies, err := database.GetMoviesByPollID("poll-1")
+	movies, err := repository.NewStore(database.DB).GetMoviesByPollID("poll-1")
 	if err != nil {
 		t.Fatalf("expected fallback movie query to succeed, got %v", err)
 	}

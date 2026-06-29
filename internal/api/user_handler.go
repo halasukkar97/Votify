@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"votify/internal/database"
-	"votify/internal/domain"
 )
 
 // CreateUserRequest is the JSON body clients send when they create a user.
@@ -28,56 +26,37 @@ type UpdateUserRequest struct {
 // CreateUserHandler handles POST /users.
 // It reads the new user's name, creates a user model, saves it in PostgreSQL,
 // and returns the created user data.
-func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (server *Server) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreateUserRequest
 
 	// Decode the incoming JSON request body into req.
 	decodeErr := json.NewDecoder(r.Body).Decode(&req)
 	if decodeErr != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
-
 		return
 	}
 
-	// The user package creates the ID and fills the user struct.
-	createdUser := domain.CreateNewUser(domain.CreateUserInput{
-		Name: req.Name,
-	})
-
-	// SaveUser writes the user to PostgreSQL, so this can fail if the DB is down.
-	err := database.SaveUser(createdUser)
+	createdUser, err := server.Service.CreateUser(req.Name)
 	if err != nil {
-		http.Error(w, "failed to save user", http.StatusInternalServerError)
+		writeServiceError(w, err, "failed to save user")
 		return
 	}
 
-	// Build a response struct instead of exposing internal storage details.
-	response := CreateUserResponse{
-		ID:   createdUser.ID,
-		Name: createdUser.Name,
-	}
-
-	// Send 201 Created and then write the response as JSON.
-	w.WriteHeader(http.StatusCreated)
-	encodeErr := json.NewEncoder(w).Encode(response)
-	if encodeErr != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-
-		return
-	}
+	response := CreateUserResponse{ID: createdUser.ID, Name: createdUser.Name}
+	writeJSON(w, http.StatusCreated, response)
 }
 
 // UsersHandler routes requests to the correct user handler.
-func UsersHandler(w http.ResponseWriter, r *http.Request) {
+func (server *Server) UsersHandler(w http.ResponseWriter, r *http.Request) {
 	// POST /users creates a new user.
 	if r.Method == http.MethodPost {
-		CreateUserHandler(w, r)
+		server.CreateUserHandler(w, r)
 		return
 	}
 
 	// GET /users lists users from PostgreSQL.
 	if r.Method == http.MethodGet {
-		ListUsersHandler(w, r)
+		server.ListUsersHandler(w, r)
 		return
 	}
 
@@ -86,10 +65,10 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // UserByIDHandler routes requests that target one existing user.
-func UserByIDHandler(w http.ResponseWriter, r *http.Request) {
+func (server *Server) UserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	// PATCH /users/{id} updates the saved display name without changing identity.
 	if r.Method == http.MethodPatch {
-		UpdateUserHandler(w, r)
+		server.UpdateUserHandler(w, r)
 		return
 	}
 
@@ -99,7 +78,7 @@ func UserByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUserHandler handles PATCH /users/{id}.
 // It lets the frontend edit a display name while keeping the same user ID for voting.
-func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (server *Server) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 	userID := strings.TrimPrefix(r.URL.Path, "/users/")
 	if userID == "" {
 		http.Error(w, "missing user id", http.StatusBadRequest)
@@ -121,29 +100,47 @@ func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedUser, err := database.UpdateUserName(userID, name)
+	updatedUser, err := server.Service.UpdateUserName(userID, name)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "user not found", http.StatusNotFound)
 			return
 		}
-
-		http.Error(w, "failed to update user", http.StatusInternalServerError)
+		writeServiceError(w, err, "failed to update user")
 		return
 	}
 
-	json.NewEncoder(w).Encode(updatedUser)
+	writeJSON(w, http.StatusOK, updatedUser)
 }
 
 // ListUsersHandler handles GET /users.
 // It loads all users from PostgreSQL and returns them as JSON.
-func ListUsersHandler(w http.ResponseWriter, r *http.Request) {
-	users, err := database.GetAllUsers()
-
+func (server *Server) ListUsersHandler(w http.ResponseWriter, r *http.Request) {
+	users, err := server.Service.ListUsers()
 	if err != nil {
-		http.Error(w, "failed to load users", http.StatusInternalServerError)
+		writeServiceError(w, err, "failed to load users")
 		return
 	}
 
-	json.NewEncoder(w).Encode(users)
+	writeJSON(w, http.StatusOK, users)
+}
+
+func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().CreateUserHandler(w, r)
+}
+
+func UsersHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().UsersHandler(w, r)
+}
+
+func UserByIDHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().UserByIDHandler(w, r)
+}
+
+func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().UpdateUserHandler(w, r)
+}
+
+func ListUsersHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().ListUsersHandler(w, r)
 }
