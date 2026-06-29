@@ -9,7 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-	"votify/movie"
+	"votify/internal/database"
+	"votify/internal/domain"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )
@@ -165,9 +166,9 @@ func TestListPollsHandlerReturnsPollsWithMoviesAndVotes(t *testing.T) {
 	}
 
 	var polls []struct {
-		ID       string        `json:"id"`
-		PollCode string        `json:"pollCode"`
-		Movies   []movie.Movie `json:"movies"`
+		ID       string         `json:"id"`
+		PollCode string         `json:"pollCode"`
+		Movies   []domain.Movie `json:"movies"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&polls); err != nil {
 		t.Fatalf("failed to decode polls response: %v", err)
@@ -189,7 +190,7 @@ func TestGetAllPollsHandlesOldRowsWithEmptyPollCode(t *testing.T) {
 
 	expectEmptyRelations(mock, "poll-legacy")
 
-	polls, err := GetAllPolls()
+	polls, err := database.GetAllPolls()
 	if err != nil {
 		t.Fatalf("expected GetAllPolls to succeed, got %v", err)
 	}
@@ -491,7 +492,7 @@ func TestGetMoviesByPollIDFallsBackWhenPosterColumnIsMissing(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "poll_id", "title", "release_year", "description"}).
 			AddRow("movie-1", "poll-1", "Dune", 2021, "Desert politics"))
 
-	movies, err := GetMoviesByPollID("poll-1")
+	movies, err := database.GetMoviesByPollID("poll-1")
 	if err != nil {
 		t.Fatalf("expected fallback movie query to succeed, got %v", err)
 	}

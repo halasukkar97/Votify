@@ -1,10 +1,8 @@
-package poll
+package domain
 
 import (
 	"errors"
 	"time"
-	"votify/movie"
-	"votify/vote"
 
 	"github.com/google/uuid"
 )
@@ -13,15 +11,15 @@ import (
 // ID is the internal UUID used by the database.
 // PollCode is the short public code users can share with friends.
 type Poll struct {
-	ID                string        `json:"id"`
-	PollCode          string        `json:"pollCode"`
-	Name              string        `json:"name"`
-	IsClosed          bool          `json:"isClosed"`
-	IsVotingActive    bool          `json:"isVotingActive"`
-	MaxVotesPerPerson int           `json:"maxVotesPerPerson"`
-	Deadline          time.Time     `json:"deadline"`
-	Movies            []movie.Movie `json:"movies"`
-	Votes             []vote.Vote   `json:"votes"`
+	ID                string    `json:"id"`
+	PollCode          string    `json:"pollCode"`
+	Name              string    `json:"name"`
+	IsClosed          bool      `json:"isClosed"`
+	IsVotingActive    bool      `json:"isVotingActive"`
+	MaxVotesPerPerson int       `json:"maxVotesPerPerson"`
+	Deadline          time.Time `json:"deadline"`
+	Movies            []Movie   `json:"movies"`
+	Votes             []Vote    `json:"votes"`
 }
 
 // CreatePollInput contains the fields needed to create a new poll.
@@ -42,20 +40,20 @@ func CreateNewPoll(input CreatePollInput) Poll {
 		IsVotingActive:    false,
 		MaxVotesPerPerson: input.MaxVotesPerPerson,
 		Deadline:          input.Deadline,
-		Movies:            []movie.Movie{},
-		Votes:             []vote.Vote{},
+		Movies:            []Movie{},
+		Votes:             []Vote{},
 	}
 }
 
 // AddMovie adds a movie to the poll.
 // The pointer receiver (*Poll) means this method changes the existing poll.
-func (p *Poll) AddMovie(movie movie.Movie) {
+func (p *Poll) AddMovie(movie Movie) {
 	p.Movies = append(p.Movies, movie)
 }
 
 // AddVote adds a vote to the poll.
 // This is called only after SubmitVote has checked the rules.
-func (p *Poll) AddVote(vote vote.Vote) {
+func (p *Poll) AddVote(vote Vote) {
 	p.Votes = append(p.Votes, vote)
 }
 
@@ -96,7 +94,7 @@ func (p *Poll) HasMovie(movieID string) bool {
 }
 
 // HasDuplicateMovies checks if the same movie was selected twice in one vote.
-func (p *Poll) HasDuplicateMovies(v vote.Vote) bool {
+func (p *Poll) HasDuplicateMovies(v Vote) bool {
 	seenMovies := make(map[string]bool)
 
 	for _, movieID := range v.MovieIDs {
@@ -129,7 +127,7 @@ func (p *Poll) IsExpired() bool {
 
 // SubmitVote validates and stores a vote.
 // It returns an error when a rule fails, so the API can explain the problem.
-func (p *Poll) SubmitVote(v vote.Vote) error {
+func (p *Poll) SubmitVote(v Vote) error {
 
 	// Stop immediately if the poll is no longer accepting votes.
 	if p.IsClosed {

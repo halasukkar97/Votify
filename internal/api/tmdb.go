@@ -8,7 +8,7 @@ import (
 )
 
 // ExternalMovie is the movie shape returned by the TMDB search endpoint.
-// It is separate from movie.Movie because TMDB uses its own IDs and field names.
+// It is separate from domain.Movie because TMDB uses its own IDs and field names.
 type ExternalMovie struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`

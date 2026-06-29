@@ -3,9 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"votify/database"
-	"votify/poll"
-	"votify/vote"
+	"votify/internal/database"
+	"votify/internal/domain"
 )
 
 // createVoteRequest is the JSON body clients send when they vote in a poll.
@@ -39,14 +38,14 @@ func CreateVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// A vote can only be submitted to an existing poll.
-	var foundPoll *poll.Poll
+	var foundPoll *domain.Poll
 	var found bool
 
 	if req.PollCode != "" {
-		foundPoll, found = FindPollByCode(req.PollCode)
+		foundPoll, found = database.FindPollByCode(req.PollCode)
 	}
 	if !found && req.PollID != "" {
-		foundPoll, found = FindPollByID(req.PollID)
+		foundPoll, found = database.FindPollByID(req.PollID)
 	}
 
 	if !found {
@@ -56,7 +55,7 @@ func CreateVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Build the vote model from the request data.
 	// PollID stays internal, even when the client joins with a public pollCode.
-	createdVote := vote.CreateNewVote(vote.CreateVoteInput{
+	createdVote := domain.CreateNewVote(domain.CreateVoteInput{
 		PollID:   foundPoll.ID,
 		UserID:   req.UserID,
 		MovieIDs: req.MovieIDs,
@@ -70,7 +69,7 @@ func CreateVoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// SaveVote writes the vote and its selected movie IDs to PostgreSQL.
-	saveErr := SaveVote(createdVote)
+	saveErr := database.SaveVote(createdVote)
 	if saveErr != nil {
 		http.Error(w, "failed to save vote", http.StatusInternalServerError)
 		return
@@ -90,52 +89,4 @@ func CreateVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-}
-
-// GetVotesByPollID reads all votes submitted for one poll.
-// It also loads each vote's selected movie IDs from the vote_movies table.
-func GetVotesByPollID(pollID string) ([]vote.Vote, error) {
-	// First load the vote rows for this poll.
-	rows, err := database.DB.Query(
-		"SELECT id, poll_id, user_id FROM votes WHERE poll_id = $1",
-		pollID,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	votes := make([]vote.Vote, 0)
-
-	// Build one vote struct for each returned database row.
-	for rows.Next() {
-		var currentVote vote.Vote
-
-		err := rows.Scan(
-			&currentVote.ID,
-			&currentVote.PollID,
-			&currentVote.UserID,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		// The selected movies live in the vote_movies join table.
-		movieIDs, err := GetMovieIDsByVoteID(currentVote.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		currentVote.MovieIDs = movieIDs
-		votes = append(votes, currentVote)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return votes, nil
 }

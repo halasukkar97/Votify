@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"votify/database"
-	"votify/user"
+	"votify/internal/database"
+	"votify/internal/domain"
 )
 
 // CreateUserRequest is the JSON body clients send when they create a user.
@@ -40,12 +40,12 @@ func CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// The user package creates the ID and fills the user struct.
-	createdUser := user.CreateNewUser(user.CreateUserInput{
+	createdUser := domain.CreateNewUser(domain.CreateUserInput{
 		Name: req.Name,
 	})
 
 	// SaveUser writes the user to PostgreSQL, so this can fail if the DB is down.
-	err := SaveUser(createdUser)
+	err := database.SaveUser(createdUser)
 	if err != nil {
 		http.Error(w, "failed to save user", http.StatusInternalServerError)
 		return
@@ -121,7 +121,7 @@ func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedUser, err := UpdateUserName(userID, name)
+	updatedUser, err := database.UpdateUserName(userID, name)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "user not found", http.StatusNotFound)
@@ -138,7 +138,7 @@ func UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
 // ListUsersHandler handles GET /users.
 // It loads all users from PostgreSQL and returns them as JSON.
 func ListUsersHandler(w http.ResponseWriter, r *http.Request) {
-	users, err := GetAllUsers()
+	users, err := database.GetAllUsers()
 
 	if err != nil {
 		http.Error(w, "failed to load users", http.StatusInternalServerError)
@@ -146,39 +146,4 @@ func ListUsersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(users)
-}
-
-// GetAllUsers reads every user row from PostgreSQL and converts each row into a user.User.
-func GetAllUsers() ([]user.User, error) {
-
-	rows, err := database.DB.Query(
-		"SELECT id, name FROM users",
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	users := make([]user.User, 0)
-
-	// rows.Next moves through the result set one database row at a time.
-	for rows.Next() {
-		var currentUser user.User
-
-		// Scan copies the current row's columns into Go variables.
-		err := rows.Scan(
-			&currentUser.ID,
-			&currentUser.Name,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		users = append(users, currentUser)
-	}
-
-	return users, nil
 }

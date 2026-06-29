@@ -1,10 +1,8 @@
-package poll
+package domain
 
 import (
 	"testing"
 	"time"
-	"votify/movie"
-	"votify/vote"
 )
 
 // newTestPoll builds a poll with only the fields each test cares about.
@@ -19,8 +17,8 @@ func newTestPoll(maxVotes int, deadline time.Time) Poll {
 }
 
 // newTestMovie creates a movie that belongs to a specific poll.
-func newTestMovie(pollID, title string) movie.Movie {
-	return movie.CreateNewMovie(movie.CreateMovieInput{
+func newTestMovie(pollID, title string) Movie {
+	return CreateNewMovie(CreateMovieInput{
 		Title:       title,
 		PollID:      pollID,
 		ReleaseYear: 2021,
@@ -29,8 +27,8 @@ func newTestMovie(pollID, title string) movie.Movie {
 }
 
 // newTestVote creates a vote with the selected movie IDs already filled in.
-func newTestVote(pollID, userID string, movieIDs []string) vote.Vote {
-	return vote.CreateNewVote(vote.CreateVoteInput{
+func newTestVote(pollID, userID string, movieIDs []string) Vote {
+	return CreateNewVote(CreateVoteInput{
 		PollID:   pollID,
 		UserID:   userID,
 		MovieIDs: movieIDs,

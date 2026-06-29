@@ -2,7 +2,6 @@ package database
 
 import (
 	"database/sql"
-	"os"
 
 	_ "github.com/lib/pq"
 )
@@ -13,10 +12,8 @@ var DB *sql.DB
 
 // Connect opens a PostgreSQL connection and verifies it with Ping.
 // sql.Open prepares the connection, while Ping confirms the database is reachable.
-func Connect() error {
+func Connect(connectionString string) error {
 	var err error
-
-	connectionString := os.Getenv("DATABASE_URL")
 
 	DB, err = sql.Open(
 		"postgres",

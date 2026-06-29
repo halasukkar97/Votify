@@ -1,11 +1,10 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
-	"votify/database"
-	"votify/movie"
+	"votify/internal/database"
+	"votify/internal/domain"
 )
 
 // CreateMovieRequest is the JSON body clients send when they add a movie to a poll.
@@ -42,7 +41,7 @@ func CreateMovieHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build the movie model before saving it.
-	createdMovie := movie.CreateNewMovie(movie.CreateMovieInput{
+	createdMovie := domain.CreateNewMovie(domain.CreateMovieInput{
 		Title:       req.Title,
 		PollID:      req.PollID,
 		ReleaseYear: req.ReleaseYear,
@@ -51,7 +50,7 @@ func CreateMovieHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// A movie must point to an existing poll, so check that before saving.
-	foundPoll, pollFound, pollError := findPollByID(req.PollID)
+	foundPoll, pollFound, pollError := database.FindPollByIDWithError(req.PollID)
 	if pollError != nil {
 		http.Error(w, "failed to check poll", http.StatusInternalServerError)
 		return
@@ -74,7 +73,7 @@ func CreateMovieHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the movie in PostgreSQL.
-	err := SaveMovie(createdMovie)
+	err := database.SaveMovie(createdMovie)
 	if err != nil {
 		http.Error(w, "failed to save movie", http.StatusInternalServerError)
 		return
@@ -122,7 +121,7 @@ func MoviesHandler(w http.ResponseWriter, r *http.Request) {
 // ListMoviesHandler handles GET /movies.
 func ListMoviesHandler(w http.ResponseWriter, r *http.Request) {
 	// Load all stored movies before encoding them as JSON.
-	movies, err := GetAllMovies()
+	movies, err := database.GetAllMovies()
 
 	if err != nil {
 		http.Error(w, "failed to load movies", http.StatusInternalServerError)
@@ -130,92 +129,4 @@ func ListMoviesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(movies)
-}
-
-// GetAllMovies reads every movie row from PostgreSQL and converts each row into a movie.Movie.
-func GetAllMovies() ([]movie.Movie, error) {
-	// Query returns rows, which must be scanned one at a time.
-	rows, err := database.DB.Query(
-		"SELECT id, poll_id, title, release_year, description, COALESCE(poster_url, '') AS poster_url FROM movies",
-	)
-
-	if err != nil {
-		rows, err = database.DB.Query(
-			"SELECT id, poll_id, title, release_year, description FROM movies",
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		return scanMovieRows(rows, false)
-	}
-
-	return scanMovieRows(rows, true)
-}
-
-// GetMoviesByPollID reads only the movies that belong to one poll.
-// Poll listing uses this to include each poll's movie options in the response.
-func GetMoviesByPollID(pollID string) ([]movie.Movie, error) {
-	// The WHERE clause filters the movies table down to the requested poll ID.
-	rows, err := database.DB.Query(
-		"SELECT id, poll_id, title, release_year, description, COALESCE(poster_url, '') AS poster_url FROM movies WHERE poll_id = $1",
-		pollID,
-	)
-
-	if err != nil {
-		rows, err = database.DB.Query(
-			"SELECT id, poll_id, title, release_year, description FROM movies WHERE poll_id = $1",
-			pollID,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		return scanMovieRows(rows, false)
-	}
-
-	return scanMovieRows(rows, true)
-}
-
-func scanMovieRows(rows *sql.Rows, hasPosterURL bool) ([]movie.Movie, error) {
-	defer rows.Close()
-
-	movies := make([]movie.Movie, 0)
-
-	// Build one movie struct for each returned database row.
-	for rows.Next() {
-		var currentMovie movie.Movie
-		var err error
-
-		if hasPosterURL {
-			err = rows.Scan(
-				&currentMovie.ID,
-				&currentMovie.PollID,
-				&currentMovie.Title,
-				&currentMovie.ReleaseYear,
-				&currentMovie.Description,
-				&currentMovie.PosterURL,
-			)
-		} else {
-			err = rows.Scan(
-				&currentMovie.ID,
-				&currentMovie.PollID,
-				&currentMovie.Title,
-				&currentMovie.ReleaseYear,
-				&currentMovie.Description,
-			)
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		movies = append(movies, currentMovie)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return movies, nil
 }

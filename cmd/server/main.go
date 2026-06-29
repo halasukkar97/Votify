@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"votify/api"
-	"votify/database"
-
-	"github.com/joho/godotenv"
+	"votify/internal/api"
+	"votify/internal/config"
+	"votify/internal/database"
 )
 
 // main is the first function Go runs when the application starts.
@@ -16,13 +14,9 @@ import (
 // HTTP route, and then starts listening for requests on port 8080.
 func main() {
 
-	// godotenv.Load reads key/value pairs from .env so os.Getenv can use them.
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found")
-	}
+	cfg := config.Load()
 
-	err = database.Connect()
+	err := database.Connect(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,12 +34,7 @@ func main() {
 	http.HandleFunc("/movies/search", api.SearchMoviesHandler)
 	http.HandleFunc("/polls/", api.PollByIDHandler)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	log.Fatal(http.ListenAndServe(":"+port, enableCORS(http.DefaultServeMux)))
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, enableCORS(http.DefaultServeMux, cfg.AllowedOrigins)))
 }
 
 // MovieVoteHandler handles the root route and returns a simple health message.
@@ -55,12 +44,7 @@ func MovieVoteHandler(w http.ResponseWriter, r *http.Request) {
 
 // enableCORS allows the known frontend apps to call this backend.
 // Without this, browsers block requests from the React app to the Go API.
-func enableCORS(next http.Handler) http.Handler {
-	allowedOrigins := map[string]bool{
-		"http://localhost:5173":         true,
-		"https://votify-six.vercel.app": true,
-	}
-
+func enableCORS(next http.Handler, allowedOrigins map[string]bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		if allowedOrigins[origin] {

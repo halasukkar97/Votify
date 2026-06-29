@@ -1,15 +1,11 @@
-package api
+package database
 
 import (
 	"database/sql"
 	"errors"
 	"testing"
 	"time"
-	"votify/database"
-	"votify/movie"
-	"votify/poll"
-	"votify/user"
-	"votify/vote"
+	"votify/internal/domain"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )
@@ -24,12 +20,12 @@ func newMockDatabase(t *testing.T) (*sql.DB, sqlmock.Sqlmock) {
 		t.Fatalf("failed to create sql mock: %v", err)
 	}
 
-	previousDB := database.DB
-	database.DB = db
+	previousDB := DB
+	DB = db
 
 	t.Cleanup(func() {
 		db.Close()
-		database.DB = previousDB
+		DB = previousDB
 	})
 
 	return db, mock
@@ -44,10 +40,21 @@ func requireExpectations(t *testing.T, mock sqlmock.Sqlmock) {
 	}
 }
 
+// expectEmptyRelations tells sqlmock that a poll has no movies and no votes.
+func expectEmptyRelations(mock sqlmock.Sqlmock, pollID string) {
+	mock.ExpectQuery(`SELECT id, poll_id, title, release_year, description, COALESCE\(poster_url, ''\) AS poster_url FROM movies WHERE poll_id`).
+		WithArgs(pollID).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "poll_id", "title", "release_year", "description", "poster_url"}))
+
+	mock.ExpectQuery("SELECT id, poll_id, user_id FROM votes WHERE poll_id").
+		WithArgs(pollID).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "poll_id", "user_id"}))
+}
+
 func TestSavePollWritesPollToDatabase(t *testing.T) {
 	_, mock := newMockDatabase(t)
 	deadline := time.Now().Add(24 * time.Hour)
-	p := poll.Poll{
+	p := domain.Poll{
 		ID:                "poll-1",
 		PollCode:          "12345678",
 		Name:              "Movie Night",
@@ -114,7 +121,7 @@ func TestActivateVotingUpdatesPollPhase(t *testing.T) {
 
 func TestSaveMovieWritesMovieToDatabase(t *testing.T) {
 	_, mock := newMockDatabase(t)
-	m := movie.Movie{
+	m := domain.Movie{
 		ID:          "movie-1",
 		PollID:      "poll-1",
 		Title:       "Dune",
@@ -136,7 +143,7 @@ func TestSaveMovieWritesMovieToDatabase(t *testing.T) {
 
 func TestSaveUserWritesUserToDatabase(t *testing.T) {
 	_, mock := newMockDatabase(t)
-	u := user.User{ID: "user-1", Name: "Hela"}
+	u := domain.User{ID: "user-1", Name: "Hela"}
 
 	mock.ExpectExec("INSERT INTO users").
 		WithArgs(u.ID, u.Name).
@@ -174,7 +181,7 @@ func TestUpdateUserNameKeepsUserID(t *testing.T) {
 
 func TestSaveVoteCommitsVoteAndSelectedMovies(t *testing.T) {
 	_, mock := newMockDatabase(t)
-	v := vote.Vote{
+	v := domain.Vote{
 		ID:       "vote-1",
 		PollID:   "poll-1",
 		UserID:   "user-1",
@@ -202,7 +209,7 @@ func TestSaveVoteCommitsVoteAndSelectedMovies(t *testing.T) {
 
 func TestSaveVoteRollsBackWhenSelectedMovieInsertFails(t *testing.T) {
 	_, mock := newMockDatabase(t)
-	v := vote.Vote{
+	v := domain.Vote{
 		ID:       "vote-1",
 		PollID:   "poll-1",
 		UserID:   "user-1",

@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"votify/database"
-	"votify/poll"
+	"votify/internal/database"
+	"votify/internal/domain"
 )
 
 // CreatePollRequest is the JSON body clients send when they create a poll.
@@ -51,7 +51,7 @@ func CreatePollHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// The poll package owns the rules for building a new poll.
-	createdPoll := poll.CreateNewPoll(poll.CreatePollInput{
+	createdPoll := domain.CreateNewPoll(domain.CreatePollInput{
 		PollCode:          pollCode,
 		Name:              req.Name,
 		MaxVotesPerPerson: req.MaxVotesPerPerson,
@@ -59,7 +59,7 @@ func CreatePollHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Save the poll in PostgreSQL so later requests can list or find it.
-	err = SavePoll(createdPoll)
+	err = database.SavePoll(createdPoll)
 	if err != nil {
 		http.Error(w, "failed to save poll", http.StatusInternalServerError)
 		return
@@ -113,14 +113,14 @@ func ResultsHandler(w http.ResponseWriter, r *http.Request) {
 	pollCode := r.URL.Query().Get("pollCode")
 	pollID := r.URL.Query().Get("pollId")
 
-	var foundPoll *poll.Poll
+	var foundPoll *domain.Poll
 	var found bool
 
 	if pollCode != "" {
-		foundPoll, found = FindPollByCode(pollCode)
+		foundPoll, found = database.FindPollByCode(pollCode)
 	}
 	if !found && pollID != "" {
-		foundPoll, found = FindPollByID(pollID)
+		foundPoll, found = database.FindPollByID(pollID)
 	}
 
 	if !found {
@@ -140,7 +140,7 @@ func ResultsHandler(w http.ResponseWriter, r *http.Request) {
 // ListPollsHandler handles GET /polls.
 func ListPollsHandler(w http.ResponseWriter, r *http.Request) {
 	// Load all stored polls before encoding them as JSON.
-	polls, err := GetAllPolls()
+	polls, err := database.GetAllPolls()
 
 	if err != nil {
 		log.Printf("failed to load polls: %v", err)
@@ -149,67 +149,6 @@ func ListPollsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(polls)
-}
-
-// GetAllPolls reads every poll row from PostgreSQL and converts each row into a poll.Poll.
-// It also loads each poll's movies and votes so clients can see the full poll state.
-func GetAllPolls() ([]poll.Poll, error) {
-	// Query returns rows, which must be scanned one at a time.
-	rows, err := database.DB.Query(
-		"SELECT id, COALESCE(poll_code, '') AS poll_code, name, is_closed, is_voting_active, max_votes_per_person, deadline FROM polls",
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	polls := make([]poll.Poll, 0)
-
-	// rows.Next moves through the result set one database row at a time.
-	for rows.Next() {
-		var currentPoll poll.Poll
-
-		// Scan copies the current row's columns into the poll struct fields.
-		err := rows.Scan(
-			&currentPoll.ID,
-			&currentPoll.PollCode,
-			&currentPoll.Name,
-			&currentPoll.IsClosed,
-			&currentPoll.IsVotingActive,
-			&currentPoll.MaxVotesPerPerson,
-			&currentPoll.Deadline,
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		// Load the movies connected to this poll before adding it to the response list.
-		movies, err := GetMoviesByPollID(currentPoll.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		currentPoll.Movies = movies
-
-		// Load the votes connected to this poll, including the selected movie IDs.
-		votes, err := GetVotesByPollID(currentPoll.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		currentPoll.Votes = votes
-
-		polls = append(polls, currentPoll)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return polls, nil
 }
 
 // PollByIDHandler handles GET /polls/{id}.
@@ -222,10 +161,10 @@ func PollByIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	foundPoll, found, codeErr := findPollByCode(pollIdentifier)
+	foundPoll, found, codeErr := database.FindPollByCodeWithError(pollIdentifier)
 	if !found {
 		var idErr error
-		foundPoll, found, idErr = findPollByID(pollIdentifier)
+		foundPoll, found, idErr = database.FindPollByIDWithError(pollIdentifier)
 		if !found {
 			log.Printf("poll not found for identifier %q: pollCodeErr=%v pollIDErr=%v", pollIdentifier, codeErr, idErr)
 		}
@@ -251,7 +190,7 @@ func ActivateVotingHandler(w http.ResponseWriter, r *http.Request, pollCode stri
 		return
 	}
 
-	foundPoll, found := FindPollByCode(pollCode)
+	foundPoll, found := database.FindPollByCode(pollCode)
 	if !found {
 		http.Error(w, "poll not found", http.StatusNotFound)
 		return
@@ -263,13 +202,13 @@ func ActivateVotingHandler(w http.ResponseWriter, r *http.Request, pollCode stri
 	}
 
 	// Activating voting locks the setup phase so no more movies can be added.
-	err := ActivateVoting(pollCode)
+	err := database.ActivateVoting(pollCode)
 	if err != nil {
 		http.Error(w, "failed to activate voting", http.StatusInternalServerError)
 		return
 	}
 
-	updatedPoll, found := FindPollByCode(pollCode)
+	updatedPoll, found := database.FindPollByCode(pollCode)
 	if !found {
 		http.Error(w, "poll not found", http.StatusNotFound)
 		return
@@ -291,7 +230,7 @@ func GenerateUniquePollCode() (string, error) {
 
 		code := fmt.Sprintf("%08d", number.Int64())
 
-		exists, err := PollCodeExists(code)
+		exists, err := database.PollCodeExists(code)
 		if err != nil {
 			return "", err
 		}
