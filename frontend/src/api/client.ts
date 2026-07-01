@@ -23,14 +23,16 @@ export type CreatePollPayload = {
   name: string;
   maxVotesPerPerson: number;
   deadline: string;
+  pollType: string;
 };
 
-export type CreateMoviePayload = {
+export type CreateOptionPayload = {
   title: string;
   pollId: string;
   releaseYear: number;
   description: string;
-  posterUrl: string;
+  imageUrl: string;
+  posterUrl?: string;
 };
 
 export type CreateUserPayload = {
@@ -44,19 +46,21 @@ export type UpdateUserPayload = {
 export type SubmitVotePayload = {
   pollCode: string;
   userId: string;
-  movieIds: string[];
+  optionIds: string[];
+  movieIds?: string[];
 };
 
-export type Movie = {
+export type Option = {
   id: string;
   pollId: string;
   title: string;
   releaseYear: number;
   description: string;
-  posterUrl: string;
+  imageUrl: string;
+  posterUrl?: string;
 };
 
-export type ExternalMovie = {
+export type ExternalOption = {
   id: number;
   title: string;
   release_date: string;
@@ -75,7 +79,8 @@ export type Vote = {
   id: string;
   pollId: string;
   userId: string;
-  movieIds: string[];
+  optionIds: string[];
+  movieIds?: string[];
 };
 
 export type Poll = {
@@ -86,7 +91,9 @@ export type Poll = {
   isClosed: boolean;
   isVotingActive: boolean;
   deadline: string;
-  movies: Movie[];
+  pollType: string;
+  options: Option[];
+  movies?: Option[];
   votes: Vote[];
 };
 
@@ -112,13 +119,17 @@ export const apiClient = {
       method: 'PATCH',
     }),
 
-  // searchMovies asks the backend to search TMDB for movie suggestions.
-  searchMovies: (query: string) =>
-    request<ExternalMovie[]>('/movies/search?q=' + encodeURIComponent(query)),
+  // searchOptions asks the backend provider for suggestions that match the poll type.
+  searchOptions: (pollType: string, query: string) =>
+    request<ExternalOption[]>('/options/search?type=' + encodeURIComponent(pollType) + '&q=' + encodeURIComponent(query)),
 
-  // createMovie adds one selected movie to the current poll.
-  createMovie: (payload: CreateMoviePayload) =>
-    request<Movie>('/movies', {
+  // searchMovies keeps older movie-specific callers working during the generic refactor.
+  searchMovies: (query: string) =>
+    request<ExternalOption[]>('/options/search?type=movie&q=' + encodeURIComponent(query)),
+
+  // createOption adds one selected option to the current poll.
+  createOption: (payload: CreateOptionPayload) =>
+    request<Option>('/options', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
@@ -137,7 +148,7 @@ export const apiClient = {
       body: JSON.stringify(payload),
     }),
 
-  // submitVote sends all selected movie IDs in one vote request.
+  // submitVote sends all selected option IDs in one vote request.
   submitVote: (payload: SubmitVotePayload) =>
     request<Vote>('/votes', {
       method: 'POST',
@@ -148,3 +159,7 @@ export const apiClient = {
   getPollResults: (pollCode: string) =>
     request<PollResults>('/results?pollCode=' + encodeURIComponent(pollCode)),
 };
+
+export type Movie = Option;
+export type ExternalMovie = ExternalOption;
+export const createMovie = apiClient.createOption;

@@ -12,6 +12,7 @@ type CreatePollRequest struct {
 	Name              string    `json:"name"`
 	MaxVotesPerPerson int       `json:"maxVotesPerPerson"`
 	Deadline          time.Time `json:"deadline"`
+	PollType          string    `json:"pollType"`
 }
 
 // CreatePollResponse is the JSON response sent back after a poll is created.
@@ -23,6 +24,7 @@ type CreatePollResponse struct {
 	IsClosed          bool      `json:"isClosed"`
 	IsVotingActive    bool      `json:"isVotingActive"`
 	Deadline          time.Time `json:"deadline"`
+	PollType          string    `json:"pollType"`
 }
 
 // CreatePollHandler handles POST /polls.
@@ -37,7 +39,7 @@ func (server *Server) CreatePollHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	createdPoll, err := server.Service.CreatePoll(req.Name, req.MaxVotesPerPerson, req.Deadline)
+	createdPoll, err := server.Service.CreatePoll(req.Name, req.MaxVotesPerPerson, req.Deadline, req.PollType)
 	if err != nil {
 		writeServiceError(w, err, "failed to save poll")
 		return
@@ -51,6 +53,7 @@ func (server *Server) CreatePollHandler(w http.ResponseWriter, r *http.Request) 
 		IsClosed:          createdPoll.IsClosed,
 		IsVotingActive:    createdPoll.IsVotingActive,
 		Deadline:          createdPoll.Deadline,
+		PollType:          createdPoll.PollType,
 	}
 
 	writeJSON(w, http.StatusCreated, response)
@@ -75,7 +78,7 @@ func (server *Server) PollsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // ResultsHandler handles GET /results?pollCode=...
-// It finds the requested poll and returns vote totals keyed by movie ID.
+// It finds the requested poll and returns vote totals keyed by option ID.
 func (server *Server) ResultsHandler(w http.ResponseWriter, r *http.Request) {
 	// Query parameters come from the URL after the question mark.
 	pollCode := r.URL.Query().Get("pollCode")

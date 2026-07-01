@@ -35,11 +35,11 @@ func requireExpectations(t *testing.T, mock sqlmock.Sqlmock) {
 	}
 }
 
-// expectEmptyRelations tells sqlmock that a poll has no movies and no votes.
+// expectEmptyRelations tells sqlmock that a poll has no options and no votes.
 func expectEmptyRelations(mock sqlmock.Sqlmock, pollID string) {
-	mock.ExpectQuery(`SELECT id, poll_id, title, release_year, description, COALESCE\(poster_url, ''\) AS poster_url FROM movies WHERE poll_id`).
+	mock.ExpectQuery(`SELECT id, poll_id, title, description, COALESCE\(image_url, ''\) AS image_url, release_year FROM options WHERE poll_id`).
 		WithArgs(pollID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "poll_id", "title", "release_year", "description", "poster_url"}))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "poll_id", "title", "description", "image_url", "release_year"}))
 
 	mock.ExpectQuery("SELECT id, poll_id, user_id FROM votes WHERE poll_id").
 		WithArgs(pollID).
@@ -57,10 +57,11 @@ func TestSavePollWritesPollToDatabase(t *testing.T) {
 		IsVotingActive:    false,
 		MaxVotesPerPerson: 2,
 		Deadline:          deadline,
+		PollType:          "movie",
 	}
 
 	mock.ExpectExec("INSERT INTO polls").
-		WithArgs(p.ID, p.PollCode, p.Name, p.IsClosed, p.IsVotingActive, p.MaxVotesPerPerson, p.Deadline).
+		WithArgs(p.ID, p.PollCode, p.Name, p.IsClosed, p.IsVotingActive, p.MaxVotesPerPerson, p.Deadline, p.PollType).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	if err := store.SavePoll(p); err != nil {
@@ -74,7 +75,7 @@ func TestFindPollByCodeUsesPollCodeColumn(t *testing.T) {
 	store, mock := newMockStore(t)
 	deadline := time.Now().Add(24 * time.Hour)
 
-	mock.ExpectQuery(`SELECT id, COALESCE\(poll_code, ''\) AS poll_code, name, is_closed, is_voting_active, max_votes_per_person, deadline\s+FROM polls\s+WHERE poll_code = \$1`).
+	mock.ExpectQuery(`SELECT id, COALESCE\(poll_code, ''\) AS poll_code, name, is_closed, is_voting_active, max_votes_per_person, deadline, COALESCE\(poll_type, 'movie'\) AS poll_type\s+FROM polls\s+WHERE poll_code = \$1`).
 		WithArgs("03739172").
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id",
@@ -84,7 +85,8 @@ func TestFindPollByCodeUsesPollCodeColumn(t *testing.T) {
 			"is_voting_active",
 			"max_votes_per_person",
 			"deadline",
-		}).AddRow("poll-1", "03739172", "Movie Night", false, false, 2, deadline))
+			"poll_type",
+		}).AddRow("poll-1", "03739172", "Movie Night", false, false, 2, deadline, "movie"))
 
 	expectEmptyRelations(mock, "poll-1")
 
@@ -125,8 +127,8 @@ func TestSaveMovieWritesMovieToDatabase(t *testing.T) {
 		PosterURL:   "https://image.test/dune.jpg",
 	}
 
-	mock.ExpectExec("INSERT INTO movies").
-		WithArgs(m.ID, m.PollID, m.Title, m.ReleaseYear, m.Description, m.PosterURL).
+	mock.ExpectExec("INSERT INTO options").
+		WithArgs(m.ID, m.PollID, m.Title, m.Description, m.PosterURL, m.ReleaseYear, "null").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 
 	if err := store.SaveMovie(m); err != nil {
@@ -177,20 +179,20 @@ func TestUpdateUserNameKeepsUserID(t *testing.T) {
 func TestSaveVoteCommitsVoteAndSelectedMovies(t *testing.T) {
 	store, mock := newMockStore(t)
 	v := domain.Vote{
-		ID:       "vote-1",
-		PollID:   "poll-1",
-		UserID:   "user-1",
-		MovieIDs: []string{"movie-1", "movie-2"},
+		ID:        "vote-1",
+		PollID:    "poll-1",
+		UserID:    "user-1",
+		OptionIDs: []string{"movie-1", "movie-2"},
 	}
 
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO votes").
 		WithArgs(v.ID, v.PollID, v.UserID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectExec("INSERT INTO vote_movies").
+	mock.ExpectExec("INSERT INTO vote_options").
 		WithArgs(v.ID, "movie-1").
 		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectExec("INSERT INTO vote_movies").
+	mock.ExpectExec("INSERT INTO vote_options").
 		WithArgs(v.ID, "movie-2").
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
@@ -205,17 +207,17 @@ func TestSaveVoteCommitsVoteAndSelectedMovies(t *testing.T) {
 func TestSaveVoteRollsBackWhenSelectedMovieInsertFails(t *testing.T) {
 	store, mock := newMockStore(t)
 	v := domain.Vote{
-		ID:       "vote-1",
-		PollID:   "poll-1",
-		UserID:   "user-1",
-		MovieIDs: []string{"movie-1"},
+		ID:        "vote-1",
+		PollID:    "poll-1",
+		UserID:    "user-1",
+		OptionIDs: []string{"movie-1"},
 	}
 
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT INTO votes").
 		WithArgs(v.ID, v.PollID, v.UserID).
 		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectExec("INSERT INTO vote_movies").
+	mock.ExpectExec("INSERT INTO vote_options").
 		WithArgs(v.ID, "movie-1").
 		WillReturnError(errors.New("join insert failed"))
 	mock.ExpectRollback()
@@ -249,9 +251,9 @@ func TestPollExistsReadsBooleanFromDatabase(t *testing.T) {
 func TestGetMovieIDsByVoteIDReadsJoinRows(t *testing.T) {
 	store, mock := newMockStore(t)
 
-	mock.ExpectQuery("SELECT movie_id FROM vote_movies").
+	mock.ExpectQuery("SELECT option_id FROM vote_options").
 		WithArgs("vote-1").
-		WillReturnRows(sqlmock.NewRows([]string{"movie_id"}).
+		WillReturnRows(sqlmock.NewRows([]string{"option_id"}).
 			AddRow("movie-1").
 			AddRow("movie-2"))
 

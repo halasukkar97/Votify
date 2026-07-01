@@ -6,9 +6,8 @@ import (
 	"net/url"
 )
 
-// ExternalMovie is the movie shape returned by the TMDB search endpoint.
-// It is separate from domain.Movie because TMDB uses its own IDs and field names.
-type ExternalMovie struct {
+// ExternalOption is the normalized shape returned by external search providers.
+type ExternalOption struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	ReleaseDate string `json:"release_date"`
@@ -17,15 +16,38 @@ type ExternalMovie struct {
 	PosterURL   string `json:"poster_url"`
 }
 
-// SearchResponse matches the top-level JSON object TMDB returns for a movie search.
-type SearchResponse struct {
-	Page    int             `json:"page"`
-	Results []ExternalMovie `json:"results"`
+// SearchProvider returns option suggestions for a poll type.
+type SearchProvider interface {
+	Search(query string) ([]ExternalOption, error)
 }
 
-// SearchMoviesHandler handles GET /movies/search?q=...
-// It reads the search text from the query string and returns matching TMDB movies.
-func (server *Server) SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {
+type movieSearchProvider struct {
+	apiKey string
+}
+
+func (provider movieSearchProvider) Search(query string) ([]ExternalOption, error) {
+	return SearchMovies(query, provider.apiKey)
+}
+
+// SearchProviderForType returns the search strategy for a poll type.
+func SearchProviderForType(pollType string, tmdbAPIKey string) SearchProvider {
+	switch pollType {
+	case "movie", "movies":
+		return movieSearchProvider{apiKey: tmdbAPIKey}
+	default:
+		return nil
+	}
+}
+
+// SearchResponse matches the top-level JSON object TMDB returns for a movie search.
+type SearchResponse struct {
+	Page    int              `json:"page"`
+	Results []ExternalOption `json:"results"`
+}
+
+// SearchOptionsHandler handles GET /options/search?type=movie&q=...
+// Providers make it easy to add new search sources later.
+func (server *Server) SearchOptionsHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 
 	if query == "" {
@@ -33,21 +55,32 @@ func (server *Server) SearchMoviesHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	movies, err := SearchMovies(query, server.TMDBAPIKey)
-	if err != nil {
-		http.Error(w, "failed to search movies", http.StatusInternalServerError)
+	pollType := r.URL.Query().Get("type")
+	if pollType == "" {
+		pollType = "movie"
+	}
+
+	provider := SearchProviderForType(pollType, server.TMDBAPIKey)
+	if provider == nil {
+		writeJSON(w, http.StatusOK, []ExternalOption{})
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(movies)
+	options, err := provider.Search(query)
+	if err != nil {
+		http.Error(w, "failed to search options", http.StatusInternalServerError)
+		return
+	}
+
+	err = json.NewEncoder(w).Encode(options)
 	if err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}
 }
 
-// SearchMovies calls TMDB's movie search API and converts the response into Go structs.
-func SearchMovies(query string, apiKey string) ([]ExternalMovie, error) {
+// SearchMovies calls TMDB's movie search API and converts the response into generic option suggestions.
+func SearchMovies(query string, apiKey string) ([]ExternalOption, error) {
 	// QueryEscape makes the search text safe to place inside a URL.
 	// For example, "star wars" becomes "star+wars".
 	escapedQuery := url.QueryEscape(query)
@@ -86,6 +119,14 @@ func SearchMovies(query string, apiKey string) ([]ExternalMovie, error) {
 	// Return only the movie results.
 	// The caller doesn't care about page numbers.
 	return searchResponse.Results, nil
+}
+
+func (server *Server) SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {
+	server.SearchOptionsHandler(w, r)
+}
+
+func SearchOptionsHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().SearchOptionsHandler(w, r)
 }
 
 func SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {

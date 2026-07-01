@@ -284,7 +284,7 @@ func TestSubmitVoteMovieDoesNotExist(t *testing.T) {
 
 	err := p.SubmitVote(v)
 
-	requireError(t, err, "this movie doesn't exist in this poll")
+	requireError(t, err, "this option does not exist in this poll")
 }
 
 func TestSubmitVoteDuplicateMovie(t *testing.T) {
@@ -298,7 +298,7 @@ func TestSubmitVoteDuplicateMovie(t *testing.T) {
 
 	err := p.SubmitVote(v)
 
-	requireError(t, err, "duplicated votes for the same movie are not allowed")
+	requireError(t, err, "duplicated votes for the same option are not allowed")
 }
 
 func TestSubmitVoteTooManyMovies(t *testing.T) {
@@ -323,5 +323,5 @@ func TestSubmitVoteTooManyMovies(t *testing.T) {
 
 	err := p.SubmitVote(v)
 
-	requireError(t, err, "too many movies selected")
+	requireError(t, err, "too many options selected")
 }

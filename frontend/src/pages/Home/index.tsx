@@ -3,7 +3,7 @@ import { usePageTitle } from '../../hooks/usePageTitle';
 import type { HomePageProps, NameFormSubmitEvent } from './interfaces';
 import './Home.scss';
 
-// HomePage is the starting point for Votify and stores the user's display name.
+// HomePage is the starting point for Voting App and stores the user's display name.
 export function HomePage({
   draftName,
   isEditingName,

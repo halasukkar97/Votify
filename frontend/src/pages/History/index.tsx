@@ -67,7 +67,7 @@ export function HistoryPage({ t }: HistoryPageProps) {
                 <th>{t('history.pollCode')}</th>
                 <th>{t('history.status')}</th>
                 <th>{t('history.endVotingOn')}</th>
-                <th>{t('history.moviesCount')}</th>
+                <th>{t('history.optionsCount')}</th>
                 <th>{t('history.action')}</th>
               </tr>
             </thead>
@@ -87,7 +87,7 @@ export function HistoryPage({ t }: HistoryPageProps) {
                       </span>
                     </td>
                     <td data-label={t('history.endVotingOn')}>{formatDate(poll.deadline)}</td>
-                    <td data-label={t('history.moviesCount')}>{poll.movies.length}</td>
+                    <td data-label={t('history.optionsCount')}>{(poll.options ?? poll.movies ?? []).length}</td>
                     <td data-label={t('history.action')}>
                       {poll.pollCode ? (
                         <Link className="history-action" to={'/polls/' + poll.pollCode}>

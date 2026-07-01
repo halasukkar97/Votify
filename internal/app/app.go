@@ -30,13 +30,15 @@ func Run() {
 	mux := http.NewServeMux()
 
 	// http.HandleFunc connects a URL path to the function that should handle it.
-	mux.HandleFunc("/", MovieVoteHandler)
+	mux.HandleFunc("/", VotingAppHandler)
 	mux.HandleFunc("/polls", server.PollsHandler)
 	mux.HandleFunc("/users", server.UsersHandler)
 	mux.HandleFunc("/users/", server.UserByIDHandler)
+	mux.HandleFunc("/options", server.OptionsHandler)
 	mux.HandleFunc("/movies", server.MoviesHandler)
 	mux.HandleFunc("/votes", server.CreateVoteHandler)
 	mux.HandleFunc("/results", server.ResultsHandler)
+	mux.HandleFunc("/options/search", server.SearchOptionsHandler)
 	mux.HandleFunc("/movies/search", server.SearchMoviesHandler)
 	mux.HandleFunc("/polls/", server.PollByIDHandler)
 
@@ -45,9 +47,9 @@ func Run() {
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, handler))
 }
 
-// MovieVoteHandler handles the root route and returns a simple health message.
-func MovieVoteHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Movie Vote API updated")
+// VotingAppHandler handles the root route and returns a simple health message.
+func VotingAppHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Voting App API updated")
 }
 
 // enableCORS allows the known frontend apps to call this backend.

@@ -4,8 +4,33 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="docs: update backend run and Render deploy commands">
-      <change beforePath="$PROJECT_DIR$/cmd/server/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/cmd/server/main.go" afterDir="false" />
+    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/api/client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/client.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/data/translations.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/data/translations.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/usePageTitle.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/hooks/usePageTitle.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/CreatePoll/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/CreatePoll/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/CreatePoll/interfaces.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/CreatePoll/interfaces.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/History/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/History/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Poll/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Poll/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/handler_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/handler_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/movie_handler.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/poll_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/poll_handler.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/tmdb.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/tmdb.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/tmdb_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/tmdb_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/api/vote_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/vote_handler.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/app/app.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/app/app.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/app/app_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/app/app_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/domain/movie.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/domain/poll.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/domain/poll.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/domain/poll_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/domain/poll_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/domain/vote.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/domain/vote.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/repository/store.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/repository/store.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/repository/store_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/repository/store_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/service/service.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/service/service.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,61 +50,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.5974631551166256" />
-      <entry key="MS500" value="3.9908285692072667" />
-      <entry key="S2" value="7.368959045640424" />
-      <entry key="S5" value="8.783658722573962" />
-      <entry key="S10" value="9.359809755726383" />
-      <entry key="S30" value="9.783540497645419" />
-      <entry key="S60" value="10.005428007374851" />
-      <entry key="M2" value="10.536203512736543" />
-      <entry key="M5" value="11.556071849705999" />
-      <entry key="M10" value="12.45743438363494" />
-      <entry key="M15" value="13.355130444612493" />
-      <entry key="M30" value="16.121490803645912" />
-      <entry key="H1" value="20.324620214371812" />
-      <entry key="H2" value="24.59290399132983" />
-      <entry key="H4" value="27.771098382494557" />
-      <entry key="D1" value="31.206851199572498" />
-      <entry key="W1" value="31.884293704435144" />
+      <entry key="MS100" value="3.3311630590677354E-6" />
+      <entry key="MS500" value="0.13906158981665312" />
+      <entry key="S2" value="1.0517934811561032" />
+      <entry key="S5" value="2.8084036945924122" />
+      <entry key="S10" value="6.531520169671588" />
+      <entry key="S30" value="13.47993181579245" />
+      <entry key="S60" value="16.47634823648974" />
+      <entry key="M2" value="18.622830223692837" />
+      <entry key="M5" value="20.722485613102325" />
+      <entry key="M10" value="22.016675988505195" />
+      <entry key="M15" value="23.04724090040645" />
+      <entry key="M30" value="25.946885629445195" />
+      <entry key="H1" value="30.221855340979445" />
+      <entry key="H2" value="34.53369666288342" />
+      <entry key="H4" value="37.738584013550465" />
+      <entry key="D1" value="41.20090787331282" />
+      <entry key="W1" value="41.88342989209714" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="0.0" />
-      <entry key="S10" value="6.249630381876447E-241" />
-      <entry key="S30" value="8.549711186567445E-81" />
-      <entry key="S60" value="9.24646483071635E-41" />
-      <entry key="M2" value="9.61585400820767E-21" />
-      <entry key="M5" value="9.844533573718574E-9" />
-      <entry key="M10" value="9.921962292671024E-5" />
-      <entry key="M15" value="0.0021432115849222997" />
-      <entry key="M30" value="0.04629483324219134" />
-      <entry key="H1" value="0.2151623415985968" />
-      <entry key="H2" value="0.46385594918961287" />
-      <entry key="H4" value="0.6810697094935378" />
-      <entry key="D1" value="0.9379908334727304" />
-      <entry key="W1" value="0.990896673834593" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0" />
+      <entry key="S10" value="1.0" />
+      <entry key="S30" value="1.0" />
+      <entry key="S60" value="1.0" />
+      <entry key="M2" value="1.0" />
+      <entry key="M5" value="1.0000000094228458" />
+      <entry key="M10" value="1.0000970713445068" />
+      <entry key="M15" value="1.0021121626728855" />
+      <entry key="M30" value="1.0459582709953887" />
+      <entry key="H1" value="1.2143788025794262" />
+      <entry key="H2" value="1.4630105858178906" />
+      <entry key="H4" value="1.6804488120482612" />
+      <entry key="D1" value="1.9378482593590283" />
+      <entry key="W1" value="1.9908751558937272" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.5094024953991807" />
-      <entry key="MS500" value="3.9083477310253567" />
-      <entry key="S2" value="7.329162904578757" />
-      <entry key="S5" value="8.764968055093346" />
-      <entry key="S10" value="9.349926118728805" />
-      <entry key="S30" value="9.780093532973046" />
-      <entry key="S60" value="10.003370651700795" />
-      <entry key="M2" value="10.534482615686803" />
-      <entry key="M5" value="11.554808788787932" />
-      <entry key="M10" value="12.456721061053033" />
-      <entry key="M15" value="13.356677270750659" />
-      <entry key="M30" value="16.167436282360253" />
-      <entry key="H1" value="20.5395640959978" />
-      <entry key="H2" value="25.056623576284508" />
-      <entry key="H4" value="28.45208865128465" />
-      <entry key="D1" value="32.14482662579945" />
-      <entry key="W1" value="32.87518811414471" />
+      <entry key="MS100" value="0.004490298414405355" />
+      <entry key="MS500" value="0.4770607870850568" />
+      <entry key="S2" value="1.8126502531580573" />
+      <entry key="S5" value="3.7017227928143743" />
+      <entry key="S10" value="7.472681601076743" />
+      <entry key="S30" value="14.457367398033327" />
+      <entry key="S60" value="17.464218263833004" />
+      <entry key="M2" value="19.61596091817477" />
+      <entry key="M5" value="21.71912308017117" />
+      <entry key="M10" value="23.014897367463867" />
+      <entry key="M15" value="24.048043931773684" />
+      <entry key="M30" value="26.992135944820077" />
+      <entry key="H1" value="31.435835796146627" />
+      <entry key="H2" value="35.99648076328938" />
+      <entry key="H4" value="39.41890826540989" />
+      <entry key="D1" value="43.138733194802214" />
+      <entry key="W1" value="43.87430170775298" />
     </decayedShown>
   </component>
   <component name="OptimizeOnSaveOptions">
@@ -182,6 +207,7 @@
     <MESSAGE value="refactor: reorganize Go backend into idiomatic internal packages" />
     <MESSAGE value="refactor: add service and repository layers to Go backend" />
     <MESSAGE value="docs: update backend run and Render deploy commands" />
-    <option name="LAST_COMMIT_MESSAGE" value="docs: update backend run and Render deploy commands" />
+    <MESSAGE value="fix: add root entrypoint for Render backend builds" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix: add root entrypoint for Render backend builds" />
   </component>
 </project>

@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Poll represents a movie voting poll.
+// Poll represents a generic voting poll.
 // ID is the internal UUID used by the database.
 // PollCode is the short public code users can share with friends.
 type Poll struct {
@@ -18,7 +18,9 @@ type Poll struct {
 	IsVotingActive    bool      `json:"isVotingActive"`
 	MaxVotesPerPerson int       `json:"maxVotesPerPerson"`
 	Deadline          time.Time `json:"deadline"`
-	Movies            []Movie   `json:"movies"`
+	PollType          string    `json:"pollType"`
+	Options           []Option  `json:"options"`
+	Movies            []Option  `json:"movies,omitempty"`
 	Votes             []Vote    `json:"votes"`
 }
 
@@ -28,6 +30,7 @@ type CreatePollInput struct {
 	Name              string    `json:"name"`
 	MaxVotesPerPerson int       `json:"maxVotesPerPerson"`
 	Deadline          time.Time `json:"deadline"`
+	PollType          string    `json:"pollType"`
 }
 
 // CreateNewPoll creates a new poll.
@@ -40,15 +43,23 @@ func CreateNewPoll(input CreatePollInput) Poll {
 		IsVotingActive:    false,
 		MaxVotesPerPerson: input.MaxVotesPerPerson,
 		Deadline:          input.Deadline,
-		Movies:            []Movie{},
+		PollType:          normalizePollType(input.PollType),
+		Options:           []Option{},
+		Movies:            []Option{},
 		Votes:             []Vote{},
 	}
 }
 
-// AddMovie adds a movie to the poll.
+// AddOption adds an option to the poll.
 // The pointer receiver (*Poll) means this method changes the existing poll.
-func (p *Poll) AddMovie(movie Movie) {
-	p.Movies = append(p.Movies, movie)
+func (p *Poll) AddOption(option Option) {
+	p.Options = append(p.Options, option)
+	p.Movies = p.Options
+}
+
+// AddMovie keeps older tests and callers working while options become the main model.
+func (p *Poll) AddMovie(option Option) {
+	p.AddOption(option)
 }
 
 // AddVote adds a vote to the poll.
@@ -63,29 +74,29 @@ func (p *Poll) Close() {
 }
 
 // ValidateVoteCount checks if the user selected no more than allowed.
-func (p *Poll) ValidateVoteCount(selectedMovieIDs []string) bool {
-	return len(selectedMovieIDs) <= p.MaxVotesPerPerson
+func (p *Poll) ValidateVoteCount(selectedOptionIDs []string) bool {
+	return len(selectedOptionIDs) <= p.MaxVotesPerPerson
 }
 
-// GetResults returns the vote count per movie.
-// The map key is a movie ID and the value is the number of votes for that movie.
+// GetResults returns the vote count per option.
+// The map key is an option ID and the value is the number of votes for that option.
 func (p *Poll) GetResults() map[string]int {
 	result := make(map[string]int)
 
 	for _, v := range p.Votes {
-		for _, movieID := range v.MovieIDs {
-			result[movieID]++
+		for _, optionID := range v.OptionIDs {
+			result[optionID]++
 		}
 	}
 
 	return result
 }
 
-// HasMovie checks if a movie belongs to the poll.
-// This prevents users from voting for movies that are not part of this poll.
-func (p *Poll) HasMovie(movieID string) bool {
-	for _, film := range p.Movies {
-		if film.ID == movieID {
+// HasOption checks if an option belongs to the poll.
+// This prevents users from voting for options that are not part of this poll.
+func (p *Poll) HasOption(optionID string) bool {
+	for _, option := range p.Options {
+		if option.ID == optionID {
 			return true
 		}
 	}
@@ -93,19 +104,29 @@ func (p *Poll) HasMovie(movieID string) bool {
 	return false
 }
 
-// HasDuplicateMovies checks if the same movie was selected twice in one vote.
-func (p *Poll) HasDuplicateMovies(v Vote) bool {
-	seenMovies := make(map[string]bool)
+// HasMovie keeps older tests and callers working while options become the main model.
+func (p *Poll) HasMovie(optionID string) bool {
+	return p.HasOption(optionID)
+}
 
-	for _, movieID := range v.MovieIDs {
-		if seenMovies[movieID] {
+// HasDuplicateOptions checks if the same option was selected twice in one vote.
+func (p *Poll) HasDuplicateOptions(v Vote) bool {
+	seenOptions := make(map[string]bool)
+
+	for _, optionID := range v.OptionIDs {
+		if seenOptions[optionID] {
 			return true
 		}
 
-		seenMovies[movieID] = true
+		seenOptions[optionID] = true
 	}
 
 	return false
+}
+
+// HasDuplicateMovies keeps older tests and callers working while options become the main model.
+func (p *Poll) HasDuplicateMovies(v Vote) bool {
+	return p.HasDuplicateOptions(v)
 }
 
 // AlreadyVoted checks if a user has already voted in this poll.
@@ -128,7 +149,6 @@ func (p *Poll) IsExpired() bool {
 // SubmitVote validates and stores a vote.
 // It returns an error when a rule fails, so the API can explain the problem.
 func (p *Poll) SubmitVote(v Vote) error {
-
 	// Stop immediately if the poll is no longer accepting votes.
 	if p.IsClosed {
 		return errors.New("poll is closed")
@@ -149,20 +169,20 @@ func (p *Poll) SubmitVote(v Vote) error {
 		return errors.New("you have already voted for this poll")
 	}
 
-	// Enforce the poll's maximum number of selected movies.
-	if !p.ValidateVoteCount(v.MovieIDs) {
-		return errors.New("too many movies selected")
+	// Enforce the poll's maximum number of selected options.
+	if !p.ValidateVoteCount(v.OptionIDs) {
+		return errors.New("too many options selected")
 	}
 
-	// Prevent one vote from counting the same movie more than once.
-	if p.HasDuplicateMovies(v) {
-		return errors.New("duplicated votes for the same movie are not allowed")
+	// Prevent one vote from counting the same option more than once.
+	if p.HasDuplicateOptions(v) {
+		return errors.New("duplicated votes for the same option are not allowed")
 	}
 
-	// Make sure every selected movie actually belongs to this poll.
-	for _, movieID := range v.MovieIDs {
-		if !p.HasMovie(movieID) {
-			return errors.New("this movie doesn't exist in this poll")
+	// Make sure every selected option actually belongs to this poll.
+	for _, optionID := range v.OptionIDs {
+		if !p.HasOption(optionID) {
+			return errors.New("this option does not exist in this poll")
 		}
 	}
 
@@ -170,4 +190,12 @@ func (p *Poll) SubmitVote(v Vote) error {
 	p.AddVote(v)
 
 	return nil
+}
+
+func normalizePollType(pollType string) string {
+	if pollType == "" {
+		return "movie"
+	}
+
+	return pollType
 }

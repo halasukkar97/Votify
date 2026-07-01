@@ -12,6 +12,7 @@ const initialFormValues: CreatePollFormValues = {
   name: '',
   maxVotesPerPerson: 3,
   endVotingOn: '',
+  pollType: 'movie',
 };
 
 function createDeadlineFromDate(date: string) {
@@ -22,7 +23,7 @@ interface CreatePollPageProps {
   t: (key: TranslationKey) => string;
 }
 
-// CreatePollPage owns the form and feedback for creating a new movie poll.
+// CreatePollPage owns the form and feedback for creating a new poll.
 export function CreatePollPage({ t }: CreatePollPageProps) {
   usePageTitle('Create Poll');
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export function CreatePollPage({ t }: CreatePollPageProps) {
   const [errorMessage, setErrorMessage] = useState('');
 
   // handleChange keeps local state in sync with the form inputs.
-  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+  function handleChange(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = event.target;
 
     setFormValues((currentValues) => ({
@@ -52,6 +53,7 @@ export function CreatePollPage({ t }: CreatePollPageProps) {
         name: formValues.name,
         maxVotesPerPerson: formValues.maxVotesPerPerson,
         deadline: createDeadlineFromDate(formValues.endVotingOn),
+        pollType: formValues.pollType,
       });
 
       if (!poll.pollCode) {
@@ -72,6 +74,18 @@ export function CreatePollPage({ t }: CreatePollPageProps) {
     <section className="page create-poll-page">
       <h1>{t('create.title')}</h1>
       <form className="form" onSubmit={handleSubmit}>
+        <label>
+          {t('create.pollType')}
+          <select name="pollType" value={formValues.pollType} onChange={handleChange}>
+            <option value="movie">{t('create.pollTypeMovie')}</option>
+            <option value="book">{t('create.pollTypeBook')}</option>
+            <option value="game">{t('create.pollTypeGame')}</option>
+            <option value="restaurant">{t('create.pollTypeRestaurant')}</option>
+            <option value="activity">{t('create.pollTypeActivity')}</option>
+            <option value="custom">{t('create.pollTypeCustom')}</option>
+          </select>
+        </label>
+
         <label>
           {t('create.pollName')}
           <input

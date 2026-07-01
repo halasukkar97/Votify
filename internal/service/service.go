@@ -21,7 +21,7 @@ var (
 	ErrInvalidInput = errors.New("invalid input")
 )
 
-// Service owns the Movie Vote application use cases.
+// Service owns the Voting App use cases.
 type Service struct {
 	Store *repository.Store
 }
@@ -32,7 +32,7 @@ func New(store *repository.Store) *Service {
 }
 
 // CreatePoll creates a poll with a unique public poll code.
-func (service *Service) CreatePoll(name string, maxVotesPerPerson int, deadline time.Time) (domain.Poll, error) {
+func (service *Service) CreatePoll(name string, maxVotesPerPerson int, deadline time.Time, pollType string) (domain.Poll, error) {
 	pollCode, err := service.GenerateUniquePollCode()
 	if err != nil {
 		return domain.Poll{}, err
@@ -43,6 +43,7 @@ func (service *Service) CreatePoll(name string, maxVotesPerPerson int, deadline 
 		Name:              name,
 		MaxVotesPerPerson: maxVotesPerPerson,
 		Deadline:          deadline,
+		PollType:          pollType,
 	})
 
 	if err := service.Store.SavePoll(createdPoll); err != nil {
@@ -52,7 +53,7 @@ func (service *Service) CreatePoll(name string, maxVotesPerPerson int, deadline 
 	return createdPoll, nil
 }
 
-// ListPolls returns every poll with related movies and votes.
+// ListPolls returns every poll with related options and votes.
 func (service *Service) ListPolls() ([]domain.Poll, error) {
 	return service.Store.GetAllPolls()
 }
@@ -109,35 +110,45 @@ func (service *Service) ActivateVoting(pollCode string) (*domain.Poll, error) {
 	return updatedPoll, nil
 }
 
-// CreateMovie adds a movie while the poll is still in setup.
-func (service *Service) CreateMovie(input domain.CreateMovieInput) (domain.Movie, error) {
-	createdMovie := domain.CreateNewMovie(input)
+// CreateOption adds an option while the poll is still in setup.
+func (service *Service) CreateOption(input domain.CreateOptionInput) (domain.Option, error) {
+	createdOption := domain.CreateNewOption(input)
 
 	foundPoll, found, err := service.Store.FindPollByIDWithError(input.PollID)
 	if err != nil {
-		return domain.Movie{}, err
+		return domain.Option{}, err
 	}
 	if !found {
-		return domain.Movie{}, ErrNotFound
+		return domain.Option{}, ErrNotFound
 	}
 
 	if foundPoll.IsVotingActive {
-		return domain.Movie{}, fmt.Errorf("%w: voting has already started, movies can no longer be added", ErrInvalidInput)
+		return domain.Option{}, fmt.Errorf("%w: voting has already started, options can no longer be added", ErrInvalidInput)
 	}
 	if foundPoll.IsClosed || foundPoll.IsExpired() {
-		return domain.Movie{}, fmt.Errorf("%w: poll is closed or expired, movies can no longer be added", ErrInvalidInput)
+		return domain.Option{}, fmt.Errorf("%w: poll is closed or expired, options can no longer be added", ErrInvalidInput)
 	}
 
-	if err := service.Store.SaveMovie(createdMovie); err != nil {
-		return domain.Movie{}, err
+	if err := service.Store.SaveOption(createdOption); err != nil {
+		return domain.Option{}, err
 	}
 
-	return createdMovie, nil
+	return createdOption, nil
 }
 
-// ListMovies returns every stored movie.
+// CreateMovie keeps old callers working while options become the main model.
+func (service *Service) CreateMovie(input domain.CreateMovieInput) (domain.Movie, error) {
+	return service.CreateOption(input)
+}
+
+// ListOptions returns every stored option.
+func (service *Service) ListOptions() ([]domain.Option, error) {
+	return service.Store.GetAllOptions()
+}
+
+// ListMovies keeps old callers working while options become the main model.
 func (service *Service) ListMovies() ([]domain.Movie, error) {
-	return service.Store.GetAllMovies()
+	return service.ListOptions()
 }
 
 // CreateUser creates a voter identity.
@@ -166,16 +177,16 @@ func (service *Service) ListUsers() ([]domain.User, error) {
 }
 
 // SubmitVote validates a vote against the poll and saves it.
-func (service *Service) SubmitVote(pollCode string, pollID string, userID string, movieIDs []string) (domain.Vote, string, error) {
+func (service *Service) SubmitVote(pollCode string, pollID string, userID string, optionIDs []string) (domain.Vote, string, error) {
 	foundPoll, err := service.getPollByCodeOrID(pollCode, pollID)
 	if err != nil {
 		return domain.Vote{}, "", err
 	}
 
 	createdVote := domain.CreateNewVote(domain.CreateVoteInput{
-		PollID:   foundPoll.ID,
-		UserID:   userID,
-		MovieIDs: movieIDs,
+		PollID:    foundPoll.ID,
+		UserID:    userID,
+		OptionIDs: optionIDs,
 	})
 
 	if err := foundPoll.SubmitVote(createdVote); err != nil {

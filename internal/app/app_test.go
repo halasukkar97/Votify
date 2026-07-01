@@ -7,19 +7,19 @@ import (
 	"testing"
 )
 
-// TestMovieVoteHandler checks the lightweight root route.
+// TestVotingAppHandler checks the lightweight root route.
 // This is the part of main.go that can be unit tested without starting the server.
-func TestMovieVoteHandler(t *testing.T) {
+func TestVotingAppHandler(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	response := httptest.NewRecorder()
 
-	MovieVoteHandler(response, request)
+	VotingAppHandler(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d", response.Code)
 	}
 
-	if !strings.Contains(response.Body.String(), "Movie Vote API") {
-		t.Fatalf("expected health response to mention Movie Vote API, got %q", response.Body.String())
+	if !strings.Contains(response.Body.String(), "Voting App API") {
+		t.Fatalf("expected health response to mention Voting App API, got %q", response.Body.String())
 	}
 }

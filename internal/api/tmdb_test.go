@@ -95,7 +95,7 @@ func TestSearchMoviesHandlerReturnsTMDBResults(t *testing.T) {
 		t.Fatalf("expected status 200, got %d with body %q", response.Code, response.Body.String())
 	}
 
-	var movies []ExternalMovie
+	var movies []ExternalOption
 	if err := json.NewDecoder(response.Body).Decode(&movies); err != nil {
 		t.Fatalf("failed to decode handler response: %v", err)
 	}

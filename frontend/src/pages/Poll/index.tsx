@@ -51,8 +51,11 @@ function getExternalPosterURL(movie: ExternalMovie) {
   return movie.poster_url ?? movie.posterUrl ?? '';
 }
 
-function countVotesForMovie(movieID: string, votes: { movieIds: string[] }[]) {
-  return votes.reduce((total, vote) => total + (vote.movieIds.includes(movieID) ? 1 : 0), 0);
+function countVotesForMovie(movieID: string, votes: { optionIds?: string[]; movieIds?: string[] }[]) {
+  return votes.reduce((total, vote) => {
+    const ids = vote.optionIds ?? vote.movieIds ?? [];
+    return total + (ids.includes(movieID) ? 1 : 0);
+  }, 0);
 }
 
 function formatVoteCount(template: string, count: number) {
@@ -110,7 +113,7 @@ export function PollPage({ t }: PollPageProps) {
     [currentUserId, pollState.poll],
   );
 
-  const displayedSelectedMovieIds = currentUserVote?.movieIds ?? selectedMovieIds;
+  const displayedSelectedMovieIds = (currentUserVote?.optionIds ?? currentUserVote?.movieIds) ?? selectedMovieIds;
   const hasAlreadyVoted = Boolean(currentUserVote);
 
   const sortedMovies = useMemo(() => {
@@ -118,7 +121,7 @@ export function PollPage({ t }: PollPageProps) {
       return [] as Movie[];
     }
 
-    return pollState.poll.movies
+    return (pollState.poll.options ?? pollState.poll.movies ?? [])
       .map((movie, index) => ({
         movie,
         index,
@@ -210,7 +213,7 @@ export function PollPage({ t }: PollPageProps) {
       }));
 
       try {
-        const suggestions = await apiClient.searchMovies(query);
+        const suggestions = await apiClient.searchOptions(pollState.poll?.pollType ?? 'movie', query);
         setMovieSearch((currentSearch) => ({
           ...currentSearch,
           suggestions,
@@ -230,7 +233,7 @@ export function PollPage({ t }: PollPageProps) {
     }, 350);
 
     return () => window.clearTimeout(timeoutID);
-  }, [movieDraft.title, movieSearch.selectedMovie, t]);
+  }, [movieDraft.title, movieSearch.selectedMovie, pollState.poll?.pollType, t]);
 
   async function refreshPoll() {
     const poll = await apiClient.getPoll(pollCode);
@@ -322,7 +325,7 @@ export function PollPage({ t }: PollPageProps) {
       await apiClient.submitVote({
         pollCode: pollState.poll.pollCode,
         userId,
-        movieIds: selectedMovieIds,
+        optionIds: selectedMovieIds,
       });
       setIsVoteConfirmOpen(false);
       setSelectedMovieIds([]);
@@ -369,7 +372,7 @@ export function PollPage({ t }: PollPageProps) {
     }
   }
 
-  // handleAddMovie sends the selected TMDB movie to the backend create movie endpoint.
+  // handleAddMovie sends the selected provider option to the backend create option endpoint.
   async function handleAddMovie(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -390,11 +393,12 @@ export function PollPage({ t }: PollPageProps) {
     setIsAddingMovie(true);
 
     try {
-      await apiClient.createMovie({
+      await apiClient.createOption({
         title: movieSearch.selectedMovie.title,
         pollId: pollState.poll.id,
         releaseYear: getReleaseYear(movieSearch.selectedMovie),
         description: movieSearch.selectedMovie.overview,
+        imageUrl: getExternalPosterURL(movieSearch.selectedMovie),
         posterUrl: getExternalPosterURL(movieSearch.selectedMovie),
       });
 
@@ -563,7 +567,7 @@ export function PollPage({ t }: PollPageProps) {
           <div className="movie-grid">
             {sortedMovies.length > 0 ? (
               sortedMovies.map((movie) => {
-                const poster = movie.posterUrl;
+                const poster = movie.imageUrl ?? movie.posterUrl;
                 const releaseYear = movie.releaseYear;
                 const description = movie.description;
                 const voteCount = pollResults[movie.id] ?? countVotesForMovie(movie.id, pollState.poll?.votes ?? []);
