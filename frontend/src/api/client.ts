@@ -19,6 +19,21 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+// uploadRequest sends multipart form data without forcing a JSON Content-Type header.
+async function uploadRequest<T>(path: string, formData: FormData): Promise<T> {
+  const response = await fetch(API_BASE_URL + path, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || 'Upload failed with status ' + response.status);
+  }
+
+  return response.json() as Promise<T>;
+}
+
 export type CreatePollPayload = {
   name: string;
   maxVotesPerPerson: number;
@@ -108,6 +123,10 @@ export type Poll = {
   votes: Vote[];
 };
 
+export type UploadImageResponse = {
+  imageUrl: string;
+};
+
 export type PollResults = Record<string, number>;
 
 export const apiClient = {
@@ -137,6 +156,13 @@ export const apiClient = {
   // searchMovies keeps older movie-specific callers working during the generic refactor.
   searchMovies: (query: string) =>
     request<ExternalOption[]>('/options/search?type=movie&q=' + encodeURIComponent(query)),
+
+  // uploadImage stores a local image through the backend and returns a persistent URL.
+  uploadImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return uploadRequest<UploadImageResponse>('/uploads', formData);
+  },
 
   // createOption adds one selected option to the current poll.
   createOption: (payload: CreateOptionPayload) =>

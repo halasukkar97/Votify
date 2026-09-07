@@ -121,6 +121,78 @@
     background: #f7f8fa;
   }
 
+
+
+  .suggestions-list--cards {
+    gap: 10px;
+    max-height: 460px;
+  }
+
+  .suggestions-list--cards button {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    align-items: start;
+    min-height: 132px;
+    padding: 10px;
+    text-align: left;
+  }
+
+  .suggestion-cover {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #eef1f4;
+    color: #6b7884;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .suggestion-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .suggestion-content {
+    display: grid;
+    gap: 4px;
+    color: #52616d;
+  }
+
+  .suggestion-content strong {
+    color: #172026;
+  }
+
+  .suggestion-description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-height: 1.35;
+  }
+
+  .suggestion-content a,
+  .movie-card-body a,
+  .selected-movie-preview a {
+    color: #2f5f9f;
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  .suggestion-add-label {
+    justify-self: start;
+    margin-top: 4px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #eef7f1;
+    color: #2f7d55;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
   .selected-movie-preview {
     display: grid;
     grid-template-columns: 88px 1fr;
@@ -172,6 +244,43 @@
   .manual-option-fields textarea {
     min-height: 84px;
     resize: vertical;
+  }
+
+
+
+  .manual-upload-error {
+    margin: 0;
+    color: #842626;
+    font-weight: 700;
+  }
+
+  .manual-cover-preview {
+    display: grid;
+    justify-items: start;
+    gap: 8px;
+  }
+
+  .manual-cover-preview img,
+  .cover-placeholder {
+    width: 96px;
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #eef1f4;
+  }
+
+  .cover-placeholder {
+    display: grid;
+    place-items: center;
+    color: #6b7884;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .manual-cover-preview span,
+  .option-authors {
+    color: #52616d;
+    font-weight: 700;
   }
 
   .movie-grid-section {

@@ -16,6 +16,7 @@ type Config struct {
 	DatabaseURL    string
 	TMDBAPIKey     string
 	GoogleBooksKey string
+	UploadDir      string
 	AllowedOrigins map[string]bool
 }
 
@@ -32,11 +33,17 @@ func Load() Config {
 		port = "8080"
 	}
 
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "uploads"
+	}
+
 	return Config{
 		Port:           port,
 		DatabaseURL:    os.Getenv("DATABASE_URL"),
 		TMDBAPIKey:     os.Getenv("TMDB_API_KEY"),
 		GoogleBooksKey: os.Getenv("GOOGLE_BOOKS_API_KEY"),
+		UploadDir:      uploadDir,
 		AllowedOrigins: allowedOriginsFromEnv(
 			os.Getenv("ALLOWED_ORIGINS"),
 			[]string{"http://localhost:5173", "https://votify-six.vercel.app"},

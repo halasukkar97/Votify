@@ -117,9 +117,18 @@
     "poll.manualPublicationYear": "Publication year",
     "poll.manualDescription": "Description",
     "poll.manualImageUrl": "Image URL",
-    "poll.manualCoverUrl": "Cover/Image URL",
     "poll.manualIsbn": "ISBN",
-    "poll.addManualOption": "Add manual option"
+    "poll.addManualOption": "Add manual option",
+    "poll.noBooksFound": "No books found.",
+    "poll.viewGoodreads": "View on Goodreads",
+    "poll.selectOption": "Select option",
+    "poll.coverAlt": "Book cover",
+    "poll.noCover": "No cover",
+    "poll.manualCoverUpload": "Cover image upload",
+    "poll.coverPreview": "Cover",
+    "poll.changeImage": "Choose a different image to change it.",
+    "poll.coverTypeError": "Choose a JPG, PNG, or WebP image.",
+    "poll.coverSizeError": "Cover image must be 5MB or smaller."
   },
   "de": {
     "app.brand": "Voting App",
@@ -239,8 +248,17 @@
     "poll.manualPublicationYear": "Veröffentlichungsjahr",
     "poll.manualDescription": "Beschreibung",
     "poll.manualImageUrl": "Bild-URL",
-    "poll.manualCoverUrl": "Cover/Bild-URL",
     "poll.manualIsbn": "ISBN",
-    "poll.addManualOption": "Manuelle Option hinzufügen"
+    "poll.addManualOption": "Manuelle Option hinzufügen",
+    "poll.noBooksFound": "Keine Bücher gefunden.",
+    "poll.viewGoodreads": "Auf Goodreads ansehen",
+    "poll.selectOption": "Option auswählen",
+    "poll.coverAlt": "Buchcover",
+    "poll.noCover": "Kein Cover",
+    "poll.manualCoverUpload": "Coverbild hochladen",
+    "poll.coverPreview": "Cover",
+    "poll.changeImage": "Wähle ein anderes Bild, um es zu ändern.",
+    "poll.coverTypeError": "Wähle ein JPG-, PNG- oder WebP-Bild.",
+    "poll.coverSizeError": "Das Coverbild darf maximal 5 MB groß sein."
   }
 }

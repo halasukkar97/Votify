@@ -136,7 +136,7 @@ func TestSearchBooksNormalizesGoogleBooksResults(t *testing.T) {
 		t.Fatalf("expected normalized book provider fields, got %+v", book)
 	}
 
-	if book.ImageURL != "http://image.test/cover.jpg" || book.Metadata["isbn"] != "9780735211292" {
+	if book.ImageURL != "https://image.test/cover.jpg" || book.Metadata["isbn"] != "9780735211292" {
 		t.Fatalf("expected normalized cover and ISBN metadata, got %+v", book)
 	}
 }

@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -82,11 +84,15 @@ type googleVolumeInfo struct {
 	Publisher           string                     `json:"publisher"`
 	PublishedDate       string                     `json:"publishedDate"`
 	Description         string                     `json:"description"`
+	InfoLink            string                     `json:"infoLink"`
 	ImageLinks          googleImageLinks           `json:"imageLinks"`
 	IndustryIdentifiers []googleIndustryIdentifier `json:"industryIdentifiers"`
 }
 
 type googleImageLinks struct {
+	ExtraLarge     string `json:"extraLarge"`
+	Large          string `json:"large"`
+	Medium         string `json:"medium"`
 	Thumbnail      string `json:"thumbnail"`
 	SmallThumbnail string `json:"smallThumbnail"`
 }
@@ -119,6 +125,7 @@ func (server *Server) SearchOptionsHandler(w http.ResponseWriter, r *http.Reques
 
 	options, err := provider.Search(query)
 	if err != nil {
+		log.Printf("option search failed for type %q and query %q: %v", pollType, query, err)
 		http.Error(w, "failed to search options", http.StatusInternalServerError)
 		return
 	}
@@ -150,6 +157,10 @@ func SearchMovies(query string, apiKey string) ([]ExternalOption, error) {
 	// Close the connection when we're done reading.
 	// Same idea as rows.Close() with PostgreSQL.
 	defer response.Body.Close()
+
+	if response.StatusCode >= http.StatusBadRequest {
+		return nil, fmt.Errorf("tmdb search failed with status %d", response.StatusCode)
+	}
 
 	// Create a struct variable that will hold
 	// the decoded JSON response.
@@ -198,9 +209,16 @@ func SearchBooks(query string, apiKey string) ([]ExternalOption, error) {
 
 	response, err := http.Get(requestURL)
 	if err != nil {
+		log.Printf("Google Books search request failed: %v", err)
 		return nil, err
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode >= http.StatusBadRequest {
+		err := fmt.Errorf("google books search failed with status %d", response.StatusCode)
+		log.Print(err)
+		return nil, err
+	}
 
 	var booksResponse googleBooksResponse
 	if err := json.NewDecoder(response.Body).Decode(&booksResponse); err != nil {
@@ -210,16 +228,16 @@ func SearchBooks(query string, apiKey string) ([]ExternalOption, error) {
 	options := make([]ExternalOption, 0, len(booksResponse.Items))
 	for _, book := range booksResponse.Items {
 		info := book.VolumeInfo
-		imageURL := info.ImageLinks.Thumbnail
-		if imageURL == "" {
-			imageURL = info.ImageLinks.SmallThumbnail
-		}
-
+		imageURL := bestGoogleBookImage(info.ImageLinks)
 		isbn := firstISBN(info.IndustryIdentifiers)
+		goodreadsURL := goodreadsSearchURL(isbn, info.Title, info.Authors)
 		metadata := map[string]any{
-			"authors":   info.Authors,
-			"isbn":      isbn,
-			"publisher": info.Publisher,
+			"authors":        info.Authors,
+			"isbn":           isbn,
+			"publisher":      info.Publisher,
+			"publishedDate":  info.PublishedDate,
+			"googleBooksUrl": info.InfoLink,
+			"goodreadsUrl":   goodreadsURL,
 		}
 
 		options = append(options, ExternalOption{
@@ -239,14 +257,49 @@ func SearchBooks(query string, apiKey string) ([]ExternalOption, error) {
 	return options, nil
 }
 
+func bestGoogleBookImage(links googleImageLinks) string {
+	for _, imageURL := range []string{
+		links.ExtraLarge,
+		links.Large,
+		links.Medium,
+		links.Thumbnail,
+		links.SmallThumbnail,
+	} {
+		if imageURL != "" {
+			return strings.Replace(imageURL, "http://", "https://", 1)
+		}
+	}
+
+	return ""
+}
+
 func firstISBN(identifiers []googleIndustryIdentifier) string {
 	for _, identifier := range identifiers {
-		if strings.Contains(identifier.Type, "ISBN") && identifier.Identifier != "" {
+		if identifier.Type == "ISBN_13" && identifier.Identifier != "" {
+			return identifier.Identifier
+		}
+	}
+
+	for _, identifier := range identifiers {
+		if identifier.Type == "ISBN_10" && identifier.Identifier != "" {
 			return identifier.Identifier
 		}
 	}
 
 	return ""
+}
+
+func goodreadsSearchURL(isbn string, title string, authors []string) string {
+	query := isbn
+	if query == "" {
+		query = strings.TrimSpace(title + " " + strings.Join(authors, " "))
+	}
+
+	if query == "" {
+		return ""
+	}
+
+	return "https://www.goodreads.com/search?q=" + url.QueryEscape(query)
 }
 
 func yearFromDate(value string) int {

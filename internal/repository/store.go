@@ -517,7 +517,7 @@ func (store *Store) scanPollRows(rows *sql.Rows, hasPollType bool) ([]domain.Pol
 func (store *Store) GetAllOptions() ([]domain.Option, error) {
 	// Query returns rows, which must be scanned one at a time.
 	rows, err := store.DB.Query(
-		"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year, COALESCE(provider, '') AS provider, COALESCE(external_id, '') AS external_id FROM options",
+		"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year, COALESCE(provider, '') AS provider, COALESCE(external_id, '') AS external_id, COALESCE(metadata::text, '{}') AS metadata FROM options",
 	)
 
 	if err != nil {
@@ -538,7 +538,7 @@ func (store *Store) GetAllOptions() ([]domain.Option, error) {
 		return store.scanOptionRows(rows, "legacy")
 	}
 
-	return store.scanOptionRows(rows, "optionProvider")
+	return store.scanOptionRows(rows, "optionProviderMetadata")
 }
 
 // GetOptionsByPollID reads only the options that belong to one poll.
@@ -546,7 +546,7 @@ func (store *Store) GetAllOptions() ([]domain.Option, error) {
 func (store *Store) GetOptionsByPollID(pollID string) ([]domain.Option, error) {
 	// The WHERE clause filters the options table down to the requested poll ID.
 	rows, err := store.DB.Query(
-		"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year, COALESCE(provider, '') AS provider, COALESCE(external_id, '') AS external_id FROM options WHERE poll_id = $1",
+		"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year, COALESCE(provider, '') AS provider, COALESCE(external_id, '') AS external_id, COALESCE(metadata::text, '{}') AS metadata FROM options WHERE poll_id = $1",
 		pollID,
 	)
 
@@ -570,7 +570,7 @@ func (store *Store) GetOptionsByPollID(pollID string) ([]domain.Option, error) {
 		return store.scanOptionRows(rows, "legacy")
 	}
 
-	return store.scanOptionRows(rows, "optionProvider")
+	return store.scanOptionRows(rows, "optionProviderMetadata")
 }
 
 func (store *Store) scanOptionRows(rows *sql.Rows, rowShape string) ([]domain.Option, error) {
@@ -583,7 +583,21 @@ func (store *Store) scanOptionRows(rows *sql.Rows, rowShape string) ([]domain.Op
 		var currentOption domain.Option
 		var err error
 
+		var metadataText string
+
 		switch rowShape {
+		case "optionProviderMetadata":
+			err = rows.Scan(
+				&currentOption.ID,
+				&currentOption.PollID,
+				&currentOption.Title,
+				&currentOption.Description,
+				&currentOption.ImageURL,
+				&currentOption.ReleaseYear,
+				&currentOption.Provider,
+				&currentOption.ExternalID,
+				&metadataText,
+			)
 		case "optionProvider":
 			err = rows.Scan(
 				&currentOption.ID,
@@ -617,6 +631,13 @@ func (store *Store) scanOptionRows(rows *sql.Rows, rowShape string) ([]domain.Op
 
 		if err != nil {
 			return nil, err
+		}
+
+		if metadataText != "" {
+			var metadata map[string]any
+			if err := json.Unmarshal([]byte(metadataText), &metadata); err == nil {
+				currentOption.Metadata = metadata
+			}
 		}
 
 		if currentOption.ImageURL == "" {

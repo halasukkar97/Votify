@@ -18,6 +18,8 @@ export interface ManualOptionValues {
   releaseYear: string;
   description: string;
   imageUrl: string;
+  coverPreviewUrl: string;
+  uploadError: string;
   author: string;
   isbn: string;
 }

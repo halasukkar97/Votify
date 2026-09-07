@@ -32,10 +32,11 @@ Create `.env` locally:
 DATABASE_URL=postgres://user:password@localhost:5432/voting_app?sslmode=disable
 TMDB_API_KEY=your_tmdb_api_key
 GOOGLE_BOOKS_API_KEY=your_google_books_api_key_optional
+UPLOAD_DIR=uploads
 PORT=8080
 ```
 
-The `.env` file is ignored by git so secrets stay local.
+The `.env` file is ignored by git so secrets stay local. `GOOGLE_BOOKS_API_KEY` is optional for basic book search, but recommended for deployed usage and clearer quota handling.
 
 For the frontend, set the backend URL when needed:
 
@@ -111,7 +112,8 @@ CREATE TABLE IF NOT EXISTS options (
 
 ALTER TABLE options
 ADD COLUMN IF NOT EXISTS provider TEXT,
-ADD COLUMN IF NOT EXISTS external_id TEXT;
+ADD COLUMN IF NOT EXISTS external_id TEXT,
+ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
 
 INSERT INTO options (id, poll_id, title, description, image_url, release_year)
 SELECT id, poll_id, title, description, poster_url, release_year
@@ -151,6 +153,8 @@ npm run dev
 ```
 
 The Vite development server normally runs at `http://localhost:5173`.
+
+Manual book cover uploads are saved by the Go backend in `UPLOAD_DIR` and served from `/uploads/{filename}`. The local `uploads/` folder is ignored by git. For production, move this to object storage if you need files to survive redeploys or multiple backend instances.
 
 ## Deploy Backend on Render
 
@@ -208,7 +212,7 @@ GET /options/search?type=movie&q=dune
 GET /options/search?type=book&q=atomic+habits
 ```
 
-Creates, lists, or searches options. Movie search uses TMDB, and book search uses Google Books. Unsupported poll types return an empty suggestion list.
+Creates, lists, or searches options. Movie search uses TMDB, and book search uses Google Books. Provider errors return an error response so the frontend can show a search failure instead of pretending there were no results.
 
 Example option body:
 
@@ -224,7 +228,24 @@ Example option body:
 }
 ```
 
-Legacy `/movies` and `/movies/search` routes still work while old clients migrate. Manual options should use `provider: "manual"`; book options can store authors, ISBN, and publisher in `metadata`.
+Legacy `/movies` and `/movies/search` routes still work while old clients migrate. Manual options should use `provider: "manual"`; book options can store authors, ISBN, publisher, published date, Google Books URL, and Goodreads search URL in `metadata`.
+
+
+### Uploads
+
+```http
+POST /uploads
+```
+
+Accepts multipart form data with an `image` field. The backend validates JPG, PNG, and WebP images up to 5 MB, saves the file under `UPLOAD_DIR`, and returns:
+
+```json
+{
+  "imageUrl": "http://localhost:8080/uploads/generated-file-name.jpg"
+}
+```
+
+The frontend stores that returned URL as `option.imageUrl` for manual book covers.
 
 ### Users
 

@@ -26,7 +26,7 @@ func Run() {
 
 	store := repository.NewStore(db)
 	appService := service.New(store)
-	server := api.NewServer(appService, cfg.TMDBAPIKey, cfg.GoogleBooksKey)
+	server := api.NewServer(appService, cfg.TMDBAPIKey, cfg.GoogleBooksKey, cfg.UploadDir)
 	mux := http.NewServeMux()
 
 	// http.HandleFunc connects a URL path to the function that should handle it.
@@ -38,6 +38,8 @@ func Run() {
 	mux.HandleFunc("/movies", server.MoviesHandler)
 	mux.HandleFunc("/votes", server.CreateVoteHandler)
 	mux.HandleFunc("/results", server.ResultsHandler)
+	mux.HandleFunc("/uploads", server.UploadCoverHandler)
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
 	mux.HandleFunc("/options/search", server.SearchOptionsHandler)
 	mux.HandleFunc("/movies/search", server.SearchMoviesHandler)
 	mux.HandleFunc("/polls/", server.PollByIDHandler)

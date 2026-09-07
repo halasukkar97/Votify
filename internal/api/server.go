@@ -16,17 +16,18 @@ type Server struct {
 	Service        *service.Service
 	TMDBAPIKey     string
 	GoogleBooksKey string
+	UploadDir      string
 }
 
 // NewServer builds the HTTP adapter for the application service layer.
-func NewServer(appService *service.Service, tmdbAPIKey string, googleBooksKey string) *Server {
-	return &Server{Service: appService, TMDBAPIKey: tmdbAPIKey, GoogleBooksKey: googleBooksKey}
+func NewServer(appService *service.Service, tmdbAPIKey string, googleBooksKey string, uploadDir string) *Server {
+	return &Server{Service: appService, TMDBAPIKey: tmdbAPIKey, GoogleBooksKey: googleBooksKey, UploadDir: uploadDir}
 }
 
 func defaultServer() *Server {
 	cfg := config.Load()
 	store := repository.NewStore(database.DB)
-	return NewServer(service.New(store), cfg.TMDBAPIKey, cfg.GoogleBooksKey)
+	return NewServer(service.New(store), cfg.TMDBAPIKey, cfg.GoogleBooksKey, cfg.UploadDir)
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
