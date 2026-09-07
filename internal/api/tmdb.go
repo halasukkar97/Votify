@@ -2,7 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -209,20 +211,31 @@ func SearchBooks(query string, apiKey string) ([]ExternalOption, error) {
 
 	response, err := http.Get(requestURL)
 	if err != nil {
-		log.Printf("Google Books search request failed: %v", err)
-		return nil, err
+		// url.Error includes the request URL, which can contain the API key.
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) {
+			err = urlErr.Err
+		}
+		return nil, fmt.Errorf("Google Books request failed: %w", err)
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode >= http.StatusBadRequest {
-		err := fmt.Errorf("google books search failed with status %d", response.StatusCode)
-		log.Print(err)
-		return nil, err
+		body, readErr := io.ReadAll(io.LimitReader(response.Body, 16*1024))
+		detail := string(body)
+		if apiKey != "" {
+			detail = strings.ReplaceAll(detail, url.QueryEscape(apiKey), "[REDACTED]")
+			detail = strings.ReplaceAll(detail, apiKey, "[REDACTED]")
+		}
+		if readErr != nil {
+			return nil, fmt.Errorf("Google Books request failed: status=%d, body=%s (body read failed)", response.StatusCode, detail)
+		}
+		return nil, fmt.Errorf("Google Books request failed: status=%d, body=%s", response.StatusCode, detail)
 	}
 
 	var booksResponse googleBooksResponse
 	if err := json.NewDecoder(response.Body).Decode(&booksResponse); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Google Books response parsing failed: %w", err)
 	}
 
 	options := make([]ExternalOption, 0, len(booksResponse.Items))

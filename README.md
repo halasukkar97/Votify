@@ -31,12 +31,20 @@ Create `.env` locally:
 ```env
 DATABASE_URL=postgres://user:password@localhost:5432/voting_app?sslmode=disable
 TMDB_API_KEY=your_tmdb_api_key
-GOOGLE_BOOKS_API_KEY=your_google_books_api_key_optional
+GOOGLE_BOOKS_API_KEY=your_google_books_api_key
 UPLOAD_DIR=uploads
 PORT=8080
 ```
 
-The `.env` file is ignored by git so secrets stay local. `GOOGLE_BOOKS_API_KEY` is optional for basic book search, but recommended for deployed usage and clearer quota handling.
+The `.env` file is ignored by git so secrets stay local. For book search, enable the Books API in your Google Cloud project and create an API key with available Books API quota. Put it in `GOOGLE_BOOKS_API_KEY` in the repository-root `.env`. The provider historically allows an omitted key, but unauthenticated requests can fail with HTTP 429 and a zero daily quota. See [Google Books API setup](https://developers.google.com/books/docs/v1/using).
+
+Start Go from the repository root so `godotenv.Load()` finds `.env`. Existing process environment variables take precedence over `.env`. Restart the backend after changing the key; no frontend restart is needed. For a deployed backend, set the same variable in its hosting environment and restart/redeploy it. Never put the key in a `VITE_` variable or frontend code.
+
+Test the backend directly:
+
+```bash
+curl --fail-with-body --get 'http://localhost:8080/options/search' --data-urlencode 'type=book' --data-urlencode 'q=Atomic Habits'
+```
 
 For the frontend, set the backend URL when needed:
 
