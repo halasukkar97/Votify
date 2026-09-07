@@ -4,16 +4,23 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 )
 
 // ExternalOption is the normalized shape returned by external search providers.
 type ExternalOption struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	ReleaseDate string `json:"release_date"`
-	Overview    string `json:"overview"`
-	PosterPath  string `json:"poster_path"`
-	PosterURL   string `json:"poster_url"`
+	ID          string         `json:"id"`
+	Title       string         `json:"title"`
+	ReleaseDate string         `json:"release_date,omitempty"`
+	Overview    string         `json:"overview,omitempty"`
+	PosterPath  string         `json:"poster_path,omitempty"`
+	PosterURL   string         `json:"poster_url,omitempty"`
+	ImageURL    string         `json:"imageUrl,omitempty"`
+	ReleaseYear int            `json:"releaseYear,omitempty"`
+	Provider    string         `json:"provider"`
+	ExternalID  string         `json:"externalId"`
+	Metadata    map[string]any `json:"metadata,omitempty"`
 }
 
 // SearchProvider returns option suggestions for a poll type.
@@ -29,20 +36,64 @@ func (provider movieSearchProvider) Search(query string) ([]ExternalOption, erro
 	return SearchMovies(query, provider.apiKey)
 }
 
-// SearchProviderForType returns the search strategy for a poll type.
-func SearchProviderForType(pollType string, tmdbAPIKey string) SearchProvider {
-	switch pollType {
-	case "movie", "movies":
-		return movieSearchProvider{apiKey: tmdbAPIKey}
-	default:
-		return nil
-	}
+type bookSearchProvider struct {
+	apiKey string
 }
 
-// SearchResponse matches the top-level JSON object TMDB returns for a movie search.
-type SearchResponse struct {
-	Page    int              `json:"page"`
-	Results []ExternalOption `json:"results"`
+func (provider bookSearchProvider) Search(query string) ([]ExternalOption, error) {
+	return SearchBooks(query, provider.apiKey)
+}
+
+// SearchProviderForType returns the search strategy for a poll type.
+func SearchProviderForType(pollType string, tmdbAPIKey string, googleBooksAPIKey string) SearchProvider {
+	providers := map[string]SearchProvider{
+		"movie": movieSearchProvider{apiKey: tmdbAPIKey},
+		"book":  bookSearchProvider{apiKey: googleBooksAPIKey},
+	}
+
+	return providers[pollType]
+}
+
+type tmdbSearchResponse struct {
+	Page    int                `json:"page"`
+	Results []tmdbSearchResult `json:"results"`
+}
+
+type tmdbSearchResult struct {
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	ReleaseDate string `json:"release_date"`
+	Overview    string `json:"overview"`
+	PosterPath  string `json:"poster_path"`
+}
+
+type googleBooksResponse struct {
+	Items []googleBookItem `json:"items"`
+}
+
+type googleBookItem struct {
+	ID         string           `json:"id"`
+	VolumeInfo googleVolumeInfo `json:"volumeInfo"`
+}
+
+type googleVolumeInfo struct {
+	Title               string                     `json:"title"`
+	Authors             []string                   `json:"authors"`
+	Publisher           string                     `json:"publisher"`
+	PublishedDate       string                     `json:"publishedDate"`
+	Description         string                     `json:"description"`
+	ImageLinks          googleImageLinks           `json:"imageLinks"`
+	IndustryIdentifiers []googleIndustryIdentifier `json:"industryIdentifiers"`
+}
+
+type googleImageLinks struct {
+	Thumbnail      string `json:"thumbnail"`
+	SmallThumbnail string `json:"smallThumbnail"`
+}
+
+type googleIndustryIdentifier struct {
+	Type       string `json:"type"`
+	Identifier string `json:"identifier"`
 }
 
 // SearchOptionsHandler handles GET /options/search?type=movie&q=...
@@ -60,7 +111,7 @@ func (server *Server) SearchOptionsHandler(w http.ResponseWriter, r *http.Reques
 		pollType = "movie"
 	}
 
-	provider := SearchProviderForType(pollType, server.TMDBAPIKey)
+	provider := SearchProviderForType(pollType, server.TMDBAPIKey, server.GoogleBooksKey)
 	if provider == nil {
 		writeJSON(w, http.StatusOK, []ExternalOption{})
 		return
@@ -102,7 +153,7 @@ func SearchMovies(query string, apiKey string) ([]ExternalOption, error) {
 
 	// Create a struct variable that will hold
 	// the decoded JSON response.
-	var searchResponse SearchResponse
+	var searchResponse tmdbSearchResponse
 
 	// Convert JSON from the API into Go structs.
 	err = json.NewDecoder(response.Body).Decode(&searchResponse)
@@ -110,15 +161,105 @@ func SearchMovies(query string, apiKey string) ([]ExternalOption, error) {
 		return nil, err
 	}
 
-	// TMDB gives a relative poster path, so add the image host to make it usable.
-	for i := range searchResponse.Results {
-		searchResponse.Results[i].PosterURL =
-			"https://image.tmdb.org/t/p/w500" +
-				searchResponse.Results[i].PosterPath
+	options := make([]ExternalOption, 0, len(searchResponse.Results))
+	for _, movie := range searchResponse.Results {
+		posterURL := ""
+		if movie.PosterPath != "" {
+			// TMDB gives a relative poster path, so add the image host to make it usable.
+			posterURL = "https://image.tmdb.org/t/p/w500" + movie.PosterPath
+		}
+
+		options = append(options, ExternalOption{
+			ID:          strconv.Itoa(movie.ID),
+			Title:       movie.Title,
+			ReleaseDate: movie.ReleaseDate,
+			Overview:    movie.Overview,
+			PosterPath:  movie.PosterPath,
+			PosterURL:   posterURL,
+			ImageURL:    posterURL,
+			ReleaseYear: yearFromDate(movie.ReleaseDate),
+			Provider:    "tmdb",
+			ExternalID:  strconv.Itoa(movie.ID),
+		})
 	}
+
 	// Return only the movie results.
 	// The caller doesn't care about page numbers.
-	return searchResponse.Results, nil
+	return options, nil
+}
+
+// SearchBooks calls Google Books and converts book volumes into generic option suggestions.
+func SearchBooks(query string, apiKey string) ([]ExternalOption, error) {
+	escapedQuery := url.QueryEscape(query)
+	requestURL := "https://www.googleapis.com/books/v1/volumes?q=" + escapedQuery
+	if apiKey != "" {
+		requestURL += "&key=" + url.QueryEscape(apiKey)
+	}
+
+	response, err := http.Get(requestURL)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	var booksResponse googleBooksResponse
+	if err := json.NewDecoder(response.Body).Decode(&booksResponse); err != nil {
+		return nil, err
+	}
+
+	options := make([]ExternalOption, 0, len(booksResponse.Items))
+	for _, book := range booksResponse.Items {
+		info := book.VolumeInfo
+		imageURL := info.ImageLinks.Thumbnail
+		if imageURL == "" {
+			imageURL = info.ImageLinks.SmallThumbnail
+		}
+
+		isbn := firstISBN(info.IndustryIdentifiers)
+		metadata := map[string]any{
+			"authors":   info.Authors,
+			"isbn":      isbn,
+			"publisher": info.Publisher,
+		}
+
+		options = append(options, ExternalOption{
+			ID:          book.ID,
+			Title:       info.Title,
+			ReleaseDate: info.PublishedDate,
+			Overview:    info.Description,
+			PosterURL:   imageURL,
+			ImageURL:    imageURL,
+			ReleaseYear: yearFromDate(info.PublishedDate),
+			Provider:    "google-books",
+			ExternalID:  book.ID,
+			Metadata:    metadata,
+		})
+	}
+
+	return options, nil
+}
+
+func firstISBN(identifiers []googleIndustryIdentifier) string {
+	for _, identifier := range identifiers {
+		if strings.Contains(identifier.Type, "ISBN") && identifier.Identifier != "" {
+			return identifier.Identifier
+		}
+	}
+
+	return ""
+}
+
+func yearFromDate(value string) int {
+	if len(value) < 4 {
+		return 0
+	}
+
+	year, err := strconv.Atoi(value[:4])
+	if err != nil {
+		return 0
+	}
+
+	return year
 }
 
 func (server *Server) SearchMoviesHandler(w http.ResponseWriter, r *http.Request) {

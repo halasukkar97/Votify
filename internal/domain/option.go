@@ -3,7 +3,7 @@ package domain
 import "github.com/google/uuid"
 
 // Option represents one generic choice that users can vote for in a poll.
-// It can be a movie, book, restaurant, activity, destination, or any custom item.
+// It can be a movie or book while keeping one shared voting model.
 type Option struct {
 	ID          string         `json:"id"`
 	PollID      string         `json:"pollId"`
@@ -12,6 +12,8 @@ type Option struct {
 	ImageURL    string         `json:"imageUrl"`
 	PosterURL   string         `json:"posterUrl,omitempty"`
 	ReleaseYear int            `json:"releaseYear,omitempty"`
+	Provider    string         `json:"provider,omitempty"`
+	ExternalID  string         `json:"externalId,omitempty"`
 	Metadata    map[string]any `json:"metadata,omitempty"`
 }
 
@@ -23,6 +25,8 @@ type CreateOptionInput struct {
 	ImageURL    string         `json:"imageUrl"`
 	PosterURL   string         `json:"posterUrl"`
 	ReleaseYear int            `json:"releaseYear,omitempty"`
+	Provider    string         `json:"provider,omitempty"`
+	ExternalID  string         `json:"externalId,omitempty"`
 	Metadata    map[string]any `json:"metadata,omitempty"`
 }
 
@@ -41,6 +45,8 @@ func CreateNewOption(input CreateOptionInput) Option {
 		ImageURL:    imageURL,
 		PosterURL:   imageURL,
 		ReleaseYear: input.ReleaseYear,
+		Provider:    input.Provider,
+		ExternalID:  input.ExternalID,
 		Metadata:    input.Metadata,
 	}
 }

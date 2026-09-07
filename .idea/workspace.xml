@@ -4,34 +4,7 @@
     <option name="autoReloadType" value="ALL" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api/client.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api/client.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/data/translations.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/data/translations.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/hooks/usePageTitle.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/hooks/usePageTitle.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/CreatePoll/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/CreatePoll/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/CreatePoll/interfaces.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/CreatePoll/interfaces.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/History/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/History/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Home/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Home/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Poll/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Poll/index.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/handler_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/handler_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/movie_handler.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/poll_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/poll_handler.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/tmdb.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/tmdb.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/tmdb_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/tmdb_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/api/vote_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/api/vote_handler.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/app/app.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/app/app.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/app/app_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/app/app_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/domain/movie.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/domain/poll.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/domain/poll.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/domain/poll_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/domain/poll_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/domain/vote.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/domain/vote.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/repository/store.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/repository/store.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/repository/store_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/repository/store_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/service/service.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/service/service.go" afterDir="false" />
-    </list>
+    <list default="true" id="80df4cc1-9e86-449e-a202-c932d5c93301" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -147,7 +120,7 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
-  <component name="RunManager" selected="Go Build.go build movie-vote">
+  <component name="RunManager">
     <configuration name="go build movie-vote" type="GoApplicationRunConfiguration" factoryName="Go Application" nameIsGenerated="true">
       <module name="MoviePollGO" />
       <working_directory value="$PROJECT_DIR$/movie-vote" />
@@ -208,6 +181,7 @@
     <MESSAGE value="refactor: add service and repository layers to Go backend" />
     <MESSAGE value="docs: update backend run and Render deploy commands" />
     <MESSAGE value="fix: add root entrypoint for Render backend builds" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix: add root entrypoint for Render backend builds" />
+    <MESSAGE value="refactor: generalize movie polls into voting app options" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor: generalize movie polls into voting app options" />
   </component>
 </project>

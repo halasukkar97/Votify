@@ -26,7 +26,7 @@ func Run() {
 
 	store := repository.NewStore(db)
 	appService := service.New(store)
-	server := api.NewServer(appService, cfg.TMDBAPIKey)
+	server := api.NewServer(appService, cfg.TMDBAPIKey, cfg.GoogleBooksKey)
 	mux := http.NewServeMux()
 
 	// http.HandleFunc connects a URL path to the function that should handle it.

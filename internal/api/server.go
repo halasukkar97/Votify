@@ -13,19 +13,20 @@ import (
 // Server holds the dependencies used by HTTP handlers.
 // Passing this into routes keeps handlers testable and avoids hidden package globals.
 type Server struct {
-	Service    *service.Service
-	TMDBAPIKey string
+	Service        *service.Service
+	TMDBAPIKey     string
+	GoogleBooksKey string
 }
 
 // NewServer builds the HTTP adapter for the application service layer.
-func NewServer(appService *service.Service, tmdbAPIKey string) *Server {
-	return &Server{Service: appService, TMDBAPIKey: tmdbAPIKey}
+func NewServer(appService *service.Service, tmdbAPIKey string, googleBooksKey string) *Server {
+	return &Server{Service: appService, TMDBAPIKey: tmdbAPIKey, GoogleBooksKey: googleBooksKey}
 }
 
 func defaultServer() *Server {
 	cfg := config.Load()
 	store := repository.NewStore(database.DB)
-	return NewServer(service.New(store), cfg.TMDBAPIKey)
+	return NewServer(service.New(store), cfg.TMDBAPIKey, cfg.GoogleBooksKey)
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {

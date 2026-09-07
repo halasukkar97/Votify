@@ -13,6 +13,15 @@ export interface MovieDraftValues {
   title: string;
 }
 
+export interface ManualOptionValues {
+  title: string;
+  releaseYear: string;
+  description: string;
+  imageUrl: string;
+  author: string;
+  isbn: string;
+}
+
 export interface MovieSearchState {
   suggestions: ExternalMovie[];
   selectedMovie: ExternalMovie | null;

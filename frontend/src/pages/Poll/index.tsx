@@ -7,6 +7,7 @@ import { usePageTitle } from '../../hooks/usePageTitle';
 import type { ExternalMovie, Movie, PollResults } from '../../api/client';
 import type {
   LoadedPollState,
+  ManualOptionValues,
   MovieDraftValues,
   MovieSearchState,
   PollPageProps,
@@ -27,6 +28,15 @@ const initialMovieSearch: MovieSearchState = {
   hasSearched: false,
 };
 
+const initialManualOption: ManualOptionValues = {
+  title: '',
+  releaseYear: '',
+  description: '',
+  imageUrl: '',
+  author: '',
+  isbn: '',
+};
+
 const toastDurationMs = 30000;
 const userNameStorageKey = 'votify:userName';
 const userIDStorageKey = 'votify:userId';
@@ -44,11 +54,15 @@ function formatDate(deadline: string) {
 }
 
 function getReleaseYear(movie: ExternalMovie) {
+  if (movie.releaseYear) {
+    return movie.releaseYear;
+  }
+
   return movie.release_date ? new Date(movie.release_date).getFullYear() : 0;
 }
 
-function getExternalPosterURL(movie: ExternalMovie) {
-  return movie.poster_url ?? movie.posterUrl ?? '';
+function getExternalImageURL(movie: ExternalMovie) {
+  return movie.imageUrl ?? movie.poster_url ?? movie.posterUrl ?? '';
 }
 
 function countVotesForMovie(movieID: string, votes: { optionIds?: string[]; movieIds?: string[] }[]) {
@@ -79,6 +93,8 @@ export function PollPage({ t }: PollPageProps) {
   });
   const [movieDraft, setMovieDraft] = useState<MovieDraftValues>(initialMovieDraft);
   const [movieSearch, setMovieSearch] = useState<MovieSearchState>(initialMovieSearch);
+  const [manualOption, setManualOption] = useState<ManualOptionValues>(initialManualOption);
+  const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
   const [isAddingMovie, setIsAddingMovie] = useState(false);
   const [selectedMovieIds, setSelectedMovieIds] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState(() => localStorage.getItem(userIDStorageKey) ?? '');
@@ -107,6 +123,7 @@ export function PollPage({ t }: PollPageProps) {
   );
 
   const isVotingActive = pollState.poll?.isVotingActive ?? false;
+  const pollType = pollState.poll?.pollType === 'book' ? 'book' : 'movie';
 
   const currentUserVote = useMemo(
     () => pollState.poll?.votes.find((vote) => vote.userId === currentUserId) ?? null,
@@ -189,7 +206,7 @@ export function PollPage({ t }: PollPageProps) {
     }
   }, [pollCode, t]);
 
-  // Search TMDB shortly after the user stops typing.
+  // Search the provider for this poll type shortly after the user stops typing.
   useEffect(() => {
     const query = movieDraft.title.trim();
 
@@ -262,7 +279,7 @@ export function PollPage({ t }: PollPageProps) {
     setToast({ ...nextToast, id: Date.now() });
   }
 
-  // handleMovieDraftChange keeps the add-movie starter form connected to state.
+  // handleMovieDraftChange keeps the add-option starter form connected to state.
   function handleMovieDraftChange(event: ChangeEvent<HTMLInputElement>) {
     const { value } = event.target;
 
@@ -282,6 +299,50 @@ export function PollPage({ t }: PollPageProps) {
       searchError: '',
       hasSearched: true,
     });
+  }
+
+  function handleManualOptionChange(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    const { name, value } = event.target;
+
+    setManualOption((currentOption) => ({
+      ...currentOption,
+      [name]: value,
+    }));
+  }
+
+  async function handleAddManualOption() {
+    if (!pollState.poll || !manualOption.title.trim()) {
+      return;
+    }
+
+    setIsAddingMovie(true);
+
+    try {
+      const authors = manualOption.author.trim() ? [manualOption.author.trim()] : [];
+      await apiClient.createOption({
+        title: manualOption.title.trim(),
+        pollId: pollState.poll.id,
+        releaseYear: Number(manualOption.releaseYear) || 0,
+        description: manualOption.description.trim(),
+        imageUrl: manualOption.imageUrl.trim(),
+        posterUrl: manualOption.imageUrl.trim(),
+        provider: 'manual',
+        externalId: null,
+        metadata: pollType === 'book' ? { authors, isbn: manualOption.isbn.trim() } : {},
+      });
+
+      setManualOption(initialManualOption);
+      setIsManualEntryOpen(false);
+      await refreshPoll();
+      showToast({ type: 'success', message: t('poll.addMovieSuccess') });
+    } catch (error) {
+      showToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : t('poll.addMovieError'),
+      });
+    } finally {
+      setIsAddingMovie(false);
+    }
   }
 
   function handleToggleMovie(movieID: string) {
@@ -397,9 +458,12 @@ export function PollPage({ t }: PollPageProps) {
         title: movieSearch.selectedMovie.title,
         pollId: pollState.poll.id,
         releaseYear: getReleaseYear(movieSearch.selectedMovie),
-        description: movieSearch.selectedMovie.overview,
-        imageUrl: getExternalPosterURL(movieSearch.selectedMovie),
-        posterUrl: getExternalPosterURL(movieSearch.selectedMovie),
+        description: movieSearch.selectedMovie.overview ?? '',
+        imageUrl: getExternalImageURL(movieSearch.selectedMovie),
+        posterUrl: getExternalImageURL(movieSearch.selectedMovie),
+        provider: movieSearch.selectedMovie.provider,
+        externalId: movieSearch.selectedMovie.externalId,
+        metadata: movieSearch.selectedMovie.metadata ?? {},
       });
 
       setMovieDraft(initialMovieDraft);
@@ -425,6 +489,8 @@ export function PollPage({ t }: PollPageProps) {
   }
 
   const selectedMovie = movieSearch.selectedMovie;
+  const searchPlaceholder = pollType === 'book' ? t('poll.bookSearchPlaceholder') : t('poll.movieTitlePlaceholder');
+  const manualToggleLabel = pollType === 'book' ? t('poll.addBookManually') : t('poll.addMovieManually');
   const shouldShowNoMoviesFound =
     movieSearch.hasSearched &&
     !movieSearch.isSearching &&
@@ -512,11 +578,11 @@ export function PollPage({ t }: PollPageProps) {
         <form className="form movie-search-form" onSubmit={handleAddMovie}>
           <h2>{t('poll.addMovies')}</h2>
           <label>
-            {t('poll.movieTitle')}
+            {pollType === 'book' ? t('poll.bookSearchLabel') : t('poll.movieTitle')}
             <input
               name="title"
               type="text"
-              placeholder={t('poll.movieTitlePlaceholder')}
+              placeholder={searchPlaceholder}
               value={movieDraft.title}
               onChange={handleMovieDraftChange}
               disabled={votingEnded || isVotingActive}
@@ -544,8 +610,8 @@ export function PollPage({ t }: PollPageProps) {
 
           {selectedMovie ? (
             <div className="selected-movie-preview">
-              {getExternalPosterURL(selectedMovie) ? (
-                <img src={getExternalPosterURL(selectedMovie)} alt={t('poll.posterAlt')} />
+              {getExternalImageURL(selectedMovie) ? (
+                <img src={getExternalImageURL(selectedMovie)} alt={t('poll.posterAlt')} />
               ) : null}
               <div>
                 <strong>{t('poll.selectedMovie')}</strong>
@@ -559,6 +625,67 @@ export function PollPage({ t }: PollPageProps) {
           <button type="submit" disabled={votingEnded || isVotingActive || isAddingMovie}>
             {isAddingMovie ? t('poll.addingMovie') : t('poll.addMovieButton')}
           </button>
+
+          <div className="manual-option-section">
+            <p>{t('poll.cantFindItem')}</p>
+            <button type="button" className="secondary-button" onClick={() => setIsManualEntryOpen((isOpen) => !isOpen)}>
+              {manualToggleLabel}
+            </button>
+
+            {isManualEntryOpen ? (
+              <div className="manual-option-fields">
+                <label>
+                  {t('poll.manualTitle')}
+                  <input
+                    name="title"
+                    type="text"
+                    value={manualOption.title}
+                    onChange={handleManualOptionChange}
+                    required
+                  />
+                </label>
+
+                {pollType === 'book' ? (
+                  <label>
+                    {t('poll.manualAuthor')}
+                    <input name="author" type="text" value={manualOption.author} onChange={handleManualOptionChange} />
+                  </label>
+                ) : null}
+
+                <label>
+                  {pollType === 'book' ? t('poll.manualPublicationYear') : t('poll.manualReleaseYear')}
+                  <input
+                    name="releaseYear"
+                    type="number"
+                    min="0"
+                    value={manualOption.releaseYear}
+                    onChange={handleManualOptionChange}
+                  />
+                </label>
+
+                <label>
+                  {t('poll.manualDescription')}
+                  <textarea name="description" value={manualOption.description} onChange={handleManualOptionChange} />
+                </label>
+
+                <label>
+                  {pollType === 'book' ? t('poll.manualCoverUrl') : t('poll.manualImageUrl')}
+                  <input name="imageUrl" type="url" value={manualOption.imageUrl} onChange={handleManualOptionChange} />
+                </label>
+
+                {pollType === 'book' ? (
+                  <label>
+                    {t('poll.manualIsbn')}
+                    <input name="isbn" type="text" value={manualOption.isbn} onChange={handleManualOptionChange} />
+                  </label>
+                ) : null}
+
+                <button type="button" onClick={handleAddManualOption} disabled={isAddingMovie || !manualOption.title.trim()}>
+                  {isAddingMovie ? t('poll.addingMovie') : t('poll.addManualOption')}
+                </button>
+              </div>
+            ) : null}
+          </div>
         </form>
         ) : null}
 

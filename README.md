@@ -1,13 +1,13 @@
 # Voting App
 
-Voting App is a full-stack polling application with a Go REST API and a React frontend. It started as a movie voting project, but the app now supports generic poll options so a poll can be about movies, books, games, restaurants, activities, vacation destinations, or custom choices.
+Voting App is a full-stack polling application with a Go REST API and a React frontend. It started as a movie voting project, but the app now supports generic poll options for movie and book polls.
 
 The app uses:
 
 - Go's standard `net/http` package for routing and handlers.
 - PostgreSQL for users, polls, options, votes, and vote/option relationships.
 - React, TypeScript, and Vite for the frontend.
-- TMDB as the first external option search provider for movie polls.
+- TMDB for movie search and Google Books for book search.
 - `github.com/joho/godotenv` to load local `.env` values.
 - `github.com/DATA-DOG/go-sqlmock` in backend tests.
 
@@ -31,6 +31,7 @@ Create `.env` locally:
 ```env
 DATABASE_URL=postgres://user:password@localhost:5432/voting_app?sslmode=disable
 TMDB_API_KEY=your_tmdb_api_key
+GOOGLE_BOOKS_API_KEY=your_google_books_api_key_optional
 PORT=8080
 ```
 
@@ -70,6 +71,8 @@ CREATE TABLE options (
   description TEXT,
   image_url TEXT,
   release_year INTEGER,
+  provider TEXT,
+  external_id TEXT,
   metadata JSONB DEFAULT '{}'::jsonb
 );
 
@@ -101,8 +104,14 @@ CREATE TABLE IF NOT EXISTS options (
   description TEXT,
   image_url TEXT,
   release_year INTEGER,
+  provider TEXT,
+  external_id TEXT,
   metadata JSONB DEFAULT '{}'::jsonb
 );
+
+ALTER TABLE options
+ADD COLUMN IF NOT EXISTS provider TEXT,
+ADD COLUMN IF NOT EXISTS external_id TEXT;
 
 INSERT INTO options (id, poll_id, title, description, image_url, release_year)
 SELECT id, poll_id, title, description, poster_url, release_year
@@ -170,7 +179,7 @@ Returns a simple text message confirming the API is running.
 POST /polls
 ```
 
-Creates a poll. `pollType` can be `movie`, `book`, `game`, `restaurant`, `activity`, or `custom`.
+Creates a poll. `pollType` can be `movie` or `book`. Unknown or empty values are treated as `movie` for backwards compatibility.
 
 ```json
 {
@@ -196,9 +205,10 @@ Poll responses include `options`, `votes`, and a compatibility `movies` field fo
 POST /options
 GET /options
 GET /options/search?type=movie&q=dune
+GET /options/search?type=book&q=atomic+habits
 ```
 
-Creates, lists, or searches options. Movie search uses TMDB. Unsupported poll types currently return an empty suggestion list until a provider is added.
+Creates, lists, or searches options. Movie search uses TMDB, and book search uses Google Books. Unsupported poll types return an empty suggestion list.
 
 Example option body:
 
@@ -208,11 +218,13 @@ Example option body:
   "pollId": "poll-id",
   "releaseYear": 2021,
   "description": "Desert politics",
-  "imageUrl": "https://image.example/dune.jpg"
+  "imageUrl": "https://image.example/dune.jpg",
+  "provider": "tmdb",
+  "externalId": "438631"
 }
 ```
 
-Legacy `/movies` and `/movies/search` routes still work while old clients migrate.
+Legacy `/movies` and `/movies/search` routes still work while old clients migrate. Manual options should use `provider: "manual"`; book options can store authors, ISBN, and publisher in `metadata`.
 
 ### Users
 

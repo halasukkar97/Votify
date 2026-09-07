@@ -33,6 +33,9 @@ export type CreateOptionPayload = {
   description: string;
   imageUrl: string;
   posterUrl?: string;
+  provider?: string;
+  externalId?: string | null;
+  metadata?: Record<string, unknown>;
 };
 
 export type CreateUserPayload = {
@@ -58,16 +61,24 @@ export type Option = {
   description: string;
   imageUrl: string;
   posterUrl?: string;
+  provider?: string;
+  externalId?: string | null;
+  metadata?: Record<string, unknown>;
 };
 
 export type ExternalOption = {
-  id: number;
+  id: string;
   title: string;
-  release_date: string;
-  overview: string;
-  poster_path: string;
+  release_date?: string;
+  overview?: string;
+  poster_path?: string;
   poster_url?: string;
   posterUrl?: string;
+  imageUrl?: string;
+  releaseYear?: number;
+  provider: string;
+  externalId: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type User = {

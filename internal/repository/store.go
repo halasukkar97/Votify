@@ -236,6 +236,24 @@ func (store *Store) SaveOption(option domain.Option) error {
 
 	_, err = store.DB.Exec(
 		`INSERT INTO options
+		(id, poll_id, title, description, image_url, release_year, provider, external_id, metadata)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		option.ID,
+		option.PollID,
+		option.Title,
+		option.Description,
+		imageURL,
+		option.ReleaseYear,
+		option.Provider,
+		option.ExternalID,
+		string(metadataJSON),
+	)
+	if err == nil {
+		return nil
+	}
+
+	_, err = store.DB.Exec(
+		`INSERT INTO options
 		(id, poll_id, title, description, image_url, release_year, metadata)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		option.ID,
@@ -499,10 +517,17 @@ func (store *Store) scanPollRows(rows *sql.Rows, hasPollType bool) ([]domain.Pol
 func (store *Store) GetAllOptions() ([]domain.Option, error) {
 	// Query returns rows, which must be scanned one at a time.
 	rows, err := store.DB.Query(
-		"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year FROM options",
+		"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year, COALESCE(provider, '') AS provider, COALESCE(external_id, '') AS external_id FROM options",
 	)
 
 	if err != nil {
+		rows, err = store.DB.Query(
+			"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year FROM options",
+		)
+		if err == nil {
+			return store.scanOptionRows(rows, "option")
+		}
+
 		rows, err = store.DB.Query(
 			"SELECT id, poll_id, title, release_year, description FROM movies",
 		)
@@ -510,10 +535,10 @@ func (store *Store) GetAllOptions() ([]domain.Option, error) {
 			return nil, err
 		}
 
-		return store.scanOptionRows(rows, false)
+		return store.scanOptionRows(rows, "legacy")
 	}
 
-	return store.scanOptionRows(rows, true)
+	return store.scanOptionRows(rows, "optionProvider")
 }
 
 // GetOptionsByPollID reads only the options that belong to one poll.
@@ -521,11 +546,19 @@ func (store *Store) GetAllOptions() ([]domain.Option, error) {
 func (store *Store) GetOptionsByPollID(pollID string) ([]domain.Option, error) {
 	// The WHERE clause filters the options table down to the requested poll ID.
 	rows, err := store.DB.Query(
-		"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year FROM options WHERE poll_id = $1",
+		"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year, COALESCE(provider, '') AS provider, COALESCE(external_id, '') AS external_id FROM options WHERE poll_id = $1",
 		pollID,
 	)
 
 	if err != nil {
+		rows, err = store.DB.Query(
+			"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year FROM options WHERE poll_id = $1",
+			pollID,
+		)
+		if err == nil {
+			return store.scanOptionRows(rows, "option")
+		}
+
 		rows, err = store.DB.Query(
 			"SELECT id, poll_id, title, release_year, description FROM movies WHERE poll_id = $1",
 			pollID,
@@ -534,13 +567,13 @@ func (store *Store) GetOptionsByPollID(pollID string) ([]domain.Option, error) {
 			return nil, err
 		}
 
-		return store.scanOptionRows(rows, false)
+		return store.scanOptionRows(rows, "legacy")
 	}
 
-	return store.scanOptionRows(rows, true)
+	return store.scanOptionRows(rows, "optionProvider")
 }
 
-func (store *Store) scanOptionRows(rows *sql.Rows, hasPosterURL bool) ([]domain.Option, error) {
+func (store *Store) scanOptionRows(rows *sql.Rows, rowShape string) ([]domain.Option, error) {
 	defer rows.Close()
 
 	options := make([]domain.Option, 0)
@@ -550,7 +583,19 @@ func (store *Store) scanOptionRows(rows *sql.Rows, hasPosterURL bool) ([]domain.
 		var currentOption domain.Option
 		var err error
 
-		if hasPosterURL {
+		switch rowShape {
+		case "optionProvider":
+			err = rows.Scan(
+				&currentOption.ID,
+				&currentOption.PollID,
+				&currentOption.Title,
+				&currentOption.Description,
+				&currentOption.ImageURL,
+				&currentOption.ReleaseYear,
+				&currentOption.Provider,
+				&currentOption.ExternalID,
+			)
+		case "option":
 			err = rows.Scan(
 				&currentOption.ID,
 				&currentOption.PollID,
@@ -559,7 +604,7 @@ func (store *Store) scanOptionRows(rows *sql.Rows, hasPosterURL bool) ([]domain.
 				&currentOption.ImageURL,
 				&currentOption.ReleaseYear,
 			)
-		} else {
+		default:
 			err = rows.Scan(
 				&currentOption.ID,
 				&currentOption.PollID,
@@ -567,6 +612,7 @@ func (store *Store) scanOptionRows(rows *sql.Rows, hasPosterURL bool) ([]domain.
 				&currentOption.ReleaseYear,
 				&currentOption.Description,
 			)
+			currentOption.Provider = "tmdb"
 		}
 
 		if err != nil {

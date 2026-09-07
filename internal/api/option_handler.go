@@ -14,6 +14,8 @@ type CreateOptionRequest struct {
 	ImageURL    string         `json:"imageUrl"`
 	PosterURL   string         `json:"posterUrl"`
 	ReleaseYear int            `json:"releaseYear"`
+	Provider    string         `json:"provider"`
+	ExternalID  string         `json:"externalId"`
 	Metadata    map[string]any `json:"metadata"`
 }
 
@@ -26,6 +28,8 @@ type CreateOptionResponse struct {
 	ImageURL    string         `json:"imageUrl"`
 	PosterURL   string         `json:"posterUrl,omitempty"`
 	ReleaseYear int            `json:"releaseYear,omitempty"`
+	Provider    string         `json:"provider,omitempty"`
+	ExternalID  string         `json:"externalId,omitempty"`
 	Metadata    map[string]any `json:"metadata,omitempty"`
 }
 
@@ -51,6 +55,8 @@ func (server *Server) CreateOptionHandler(w http.ResponseWriter, r *http.Request
 		ImageURL:    req.ImageURL,
 		PosterURL:   req.PosterURL,
 		ReleaseYear: req.ReleaseYear,
+		Provider:    req.Provider,
+		ExternalID:  req.ExternalID,
 		Metadata:    req.Metadata,
 	})
 	if err != nil {
@@ -96,6 +102,8 @@ func optionResponse(option domain.Option) CreateOptionResponse {
 		ImageURL:    option.ImageURL,
 		PosterURL:   option.PosterURL,
 		ReleaseYear: option.ReleaseYear,
+		Provider:    option.Provider,
+		ExternalID:  option.ExternalID,
 		Metadata:    option.Metadata,
 	}
 }

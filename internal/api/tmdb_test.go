@@ -104,3 +104,39 @@ func TestSearchMoviesHandlerReturnsTMDBResults(t *testing.T) {
 		t.Fatalf("expected Arrival result, got %+v", movies)
 	}
 }
+
+func TestSearchBooksNormalizesGoogleBooksResults(t *testing.T) {
+	withMockTMDB(t, func(r *http.Request) string {
+		if !strings.Contains(r.URL.Path, "/books/v1/volumes") {
+			t.Fatalf("expected Google Books request, got %q", r.URL.String())
+		}
+
+		if r.URL.Query().Get("q") != "atomic habits" {
+			t.Fatalf("expected decoded query to match original search text, got %q", r.URL.Query().Get("q"))
+		}
+
+		if r.URL.Query().Get("key") != "books-key" {
+			t.Fatalf("expected Google Books key, got %q", r.URL.Query().Get("key"))
+		}
+
+		return `{"items":[{"id":"book-1","volumeInfo":{"title":"Atomic Habits","authors":["James Clear"],"publisher":"Avery","publishedDate":"2018-10-16","description":"Tiny changes, remarkable results","imageLinks":{"thumbnail":"http://image.test/cover.jpg"},"industryIdentifiers":[{"type":"ISBN_13","identifier":"9780735211292"}]}}]}`
+	})
+
+	books, err := SearchBooks("atomic habits", "books-key")
+	if err != nil {
+		t.Fatalf("expected SearchBooks to succeed, got %v", err)
+	}
+
+	if len(books) != 1 {
+		t.Fatalf("expected one Google Books result, got %d", len(books))
+	}
+
+	book := books[0]
+	if book.Provider != "google-books" || book.ExternalID != "book-1" || book.ReleaseYear != 2018 {
+		t.Fatalf("expected normalized book provider fields, got %+v", book)
+	}
+
+	if book.ImageURL != "http://image.test/cover.jpg" || book.Metadata["isbn"] != "9780735211292" {
+		t.Fatalf("expected normalized cover and ISBN metadata, got %+v", book)
+	}
+}

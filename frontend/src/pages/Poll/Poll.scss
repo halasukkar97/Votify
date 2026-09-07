@@ -144,6 +144,36 @@
     margin: 4px 0;
   }
 
+
+
+  .manual-option-section {
+    display: grid;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px solid #eef1f4;
+  }
+
+  .manual-option-section p {
+    margin: 0;
+    color: #52616d;
+    font-weight: 700;
+  }
+
+  .manual-option-section .secondary-button {
+    justify-self: start;
+  }
+
+  .manual-option-fields {
+    display: grid;
+    gap: 10px;
+  }
+
+  .manual-option-fields textarea {
+    min-height: 84px;
+    resize: vertical;
+  }
+
   .movie-grid-section {
     display: grid;
     gap: 16px;

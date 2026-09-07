@@ -193,9 +193,12 @@ func (p *Poll) SubmitVote(v Vote) error {
 }
 
 func normalizePollType(pollType string) string {
-	if pollType == "" {
+	switch pollType {
+	case "book":
+		return "book"
+	case "movie", "":
+		return "movie"
+	default:
 		return "movie"
 	}
-
-	return pollType
 }

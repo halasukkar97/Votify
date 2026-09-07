@@ -79,10 +79,6 @@ export function CreatePollPage({ t }: CreatePollPageProps) {
           <select name="pollType" value={formValues.pollType} onChange={handleChange}>
             <option value="movie">{t('create.pollTypeMovie')}</option>
             <option value="book">{t('create.pollTypeBook')}</option>
-            <option value="game">{t('create.pollTypeGame')}</option>
-            <option value="restaurant">{t('create.pollTypeRestaurant')}</option>
-            <option value="activity">{t('create.pollTypeActivity')}</option>
-            <option value="custom">{t('create.pollTypeCustom')}</option>
           </select>
         </label>
 
