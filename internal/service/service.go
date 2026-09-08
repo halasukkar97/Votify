@@ -136,6 +136,40 @@ func (service *Service) CreateOption(input domain.CreateOptionInput) (domain.Opt
 	return createdOption, nil
 }
 
+// DeleteOption removes an option only while its poll remains in setup.
+func (service *Service) DeleteOption(optionID string) error {
+	pollID, found, err := service.Store.GetOptionPollID(optionID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrNotFound
+	}
+
+	foundPoll, found, err := service.Store.FindPollByIDWithError(pollID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrNotFound
+	}
+	if foundPoll.IsVotingActive {
+		return fmt.Errorf("%w: voting has already started, options can no longer be removed", ErrInvalidInput)
+	}
+	if foundPoll.IsClosed || foundPoll.IsExpired() {
+		return fmt.Errorf("%w: poll is closed or expired, options can no longer be removed", ErrInvalidInput)
+	}
+
+	deleted, err := service.Store.DeleteOption(optionID)
+	if err != nil {
+		return err
+	}
+	if !deleted {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // CreateMovie keeps old callers working while options become the main model.
 func (service *Service) CreateMovie(input domain.CreateMovieInput) (domain.Movie, error) {
 	return service.CreateOption(input)

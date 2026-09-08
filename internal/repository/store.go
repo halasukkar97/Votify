@@ -283,6 +283,56 @@ func (store *Store) SaveOption(option domain.Option) error {
 	return err
 }
 
+// GetOptionPollID returns the poll that owns an option.
+func (store *Store) GetOptionPollID(optionID string) (string, bool, error) {
+	var pollID string
+	err := store.DB.QueryRow("SELECT poll_id FROM options WHERE id = $1", optionID).Scan(&pollID)
+	if err == nil {
+		return pollID, true, nil
+	}
+	if err != sql.ErrNoRows {
+		return "", false, err
+	}
+
+	err = store.DB.QueryRow("SELECT poll_id FROM movies WHERE id = $1", optionID).Scan(&pollID)
+	if err == sql.ErrNoRows {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+
+	return pollID, true, nil
+}
+
+// DeleteOption removes one option, with a legacy movie-table fallback.
+func (store *Store) DeleteOption(optionID string) (bool, error) {
+	result, err := store.DB.Exec("DELETE FROM options WHERE id = $1", optionID)
+	if err == nil {
+		deleted, rowsErr := result.RowsAffected()
+		if rowsErr != nil {
+			return false, rowsErr
+		}
+		if deleted > 0 {
+			return true, nil
+		}
+	}
+
+	result, legacyErr := store.DB.Exec("DELETE FROM movies WHERE id = $1", optionID)
+	if legacyErr != nil {
+		if err != nil {
+			return false, err
+		}
+		return false, legacyErr
+	}
+
+	deleted, rowsErr := result.RowsAffected()
+	if rowsErr != nil {
+		return false, rowsErr
+	}
+	return deleted > 0, nil
+}
+
 // SaveMovie keeps older callers working while options become the main model.
 func (store *Store) SaveMovie(option domain.Movie) error {
 	return store.SaveOption(option)

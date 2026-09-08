@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"votify/internal/domain"
 )
 
@@ -82,6 +83,27 @@ func (server *Server) OptionsHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 }
 
+// OptionByIDHandler handles setup-only operations on /options/{optionId}.
+func (server *Server) OptionByIDHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	optionID := strings.TrimPrefix(r.URL.Path, "/options/")
+	if optionID == "" || strings.Contains(optionID, "/") {
+		http.Error(w, "missing option id", http.StatusBadRequest)
+		return
+	}
+
+	if err := server.Service.DeleteOption(optionID); err != nil {
+		writeServiceError(w, err, "failed to remove option")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]bool{"deleted": true})
+}
+
 // ListOptionsHandler handles GET /options.
 func (server *Server) ListOptionsHandler(w http.ResponseWriter, r *http.Request) {
 	options, err := server.Service.ListOptions()
@@ -126,6 +148,10 @@ func CreateOptionHandler(w http.ResponseWriter, r *http.Request) {
 
 func OptionsHandler(w http.ResponseWriter, r *http.Request) {
 	defaultServer().OptionsHandler(w, r)
+}
+
+func OptionByIDHandler(w http.ResponseWriter, r *http.Request) {
+	defaultServer().OptionByIDHandler(w, r)
 }
 
 func ListOptionsHandler(w http.ResponseWriter, r *http.Request) {

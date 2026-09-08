@@ -35,6 +35,7 @@ func Run() {
 	mux.HandleFunc("/users", server.UsersHandler)
 	mux.HandleFunc("/users/", server.UserByIDHandler)
 	mux.HandleFunc("/options", server.OptionsHandler)
+	mux.HandleFunc("/options/", server.OptionByIDHandler)
 	mux.HandleFunc("/movies", server.MoviesHandler)
 	mux.HandleFunc("/votes", server.CreateVoteHandler)
 	mux.HandleFunc("/results", server.ResultsHandler)
