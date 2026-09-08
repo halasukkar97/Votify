@@ -149,6 +149,9 @@ export const apiClient = {
       method: 'PATCH',
     }),
 
+  bookDetails: (key: string) =>
+    request<{ description: string }>('/options/book-details?key=' + encodeURIComponent(key)),
+
   // searchOptions asks the backend provider for suggestions that match the poll type.
   searchOptions: (pollType: string, query: string) =>
     request<ExternalOption[]>('/options/search?type=' + encodeURIComponent(pollType) + '&q=' + encodeURIComponent(query)),

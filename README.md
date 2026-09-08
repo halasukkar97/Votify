@@ -7,7 +7,7 @@ The app uses:
 - Go's standard `net/http` package for routing and handlers.
 - PostgreSQL for users, polls, options, votes, and vote/option relationships.
 - React, TypeScript, and Vite for the frontend.
-- TMDB for movie search and Google Books for book search.
+- TMDB for movie search and Open Library for book search.
 - `github.com/joho/godotenv` to load local `.env` values.
 - `github.com/DATA-DOG/go-sqlmock` in backend tests.
 
@@ -31,14 +31,17 @@ Create `.env` locally:
 ```env
 DATABASE_URL=postgres://user:password@localhost:5432/voting_app?sslmode=disable
 TMDB_API_KEY=your_tmdb_api_key
-GOOGLE_BOOKS_API_KEY=your_google_books_api_key
 UPLOAD_DIR=uploads
 PORT=8080
 ```
 
-The `.env` file is ignored by git so secrets stay local. For book search, enable the Books API in your Google Cloud project and create an API key with available Books API quota. Put it in `GOOGLE_BOOKS_API_KEY` in the repository-root `.env`. The provider historically allows an omitted key, but unauthenticated requests can fail with HTTP 429 and a zero daily quota. See [Google Books API setup](https://developers.google.com/books/docs/v1/using).
+The `.env` file is ignored by git so secrets stay local. Book search uses the public [Open Library Search API](https://openlibrary.org/dev/docs/api/search) and requires no API key. Keep `TMDB_API_KEY` for movie search.
 
-Start Go from the repository root so `godotenv.Load()` finds `.env`. Existing process environment variables take precedence over `.env`. Restart the backend after changing the key; no frontend restart is needed. For a deployed backend, set the same variable in its hosting environment and restart/redeploy it. Never put the key in a `VITE_` variable or frontend code.
+Book searches use `https://openlibrary.org/search.json?q=<query>&limit=10&fields=key,title,author_name,first_publish_year,cover_i,isbn,publisher`. Covers use `https://covers.openlibrary.org/b/id/<cover_i>-L.jpg`; missing covers use the existing placeholder. ISBN-13 is preferred over ISBN-10. Goodreads links search by ISBN, or title and first author when ISBN is absent.
+
+Descriptions load only when a result is selected, through `GET /options/book-details?key=/works/OL12345W`. The backend fetches `https://openlibrary.org/works/OL12345W.json` and accepts string or object descriptions. Missing or unavailable details never prevent adding the book. Open Library calls identify Votify in the User-Agent, have a 15-second timeout, and are paced to one request per second per backend process. Frontend searches remain debounced.
+
+Restart the backend and frontend after updating the application. No database migration is needed; books still use generic options and the existing manual cover upload flow.
 
 Test the backend directly:
 
@@ -220,7 +223,7 @@ GET /options/search?type=movie&q=dune
 GET /options/search?type=book&q=atomic+habits
 ```
 
-Creates, lists, or searches options. Movie search uses TMDB, and book search uses Google Books. Provider errors return an error response so the frontend can show a search failure instead of pretending there were no results.
+Creates, lists, or searches options. Movie search uses TMDB, and book search uses Open Library. Provider errors return an error response so the frontend can show a search failure instead of pretending there were no results.
 
 Example option body:
 
@@ -236,7 +239,7 @@ Example option body:
 }
 ```
 
-Legacy `/movies` and `/movies/search` routes still work while old clients migrate. Manual options should use `provider: "manual"`; book options can store authors, ISBN, publisher, published date, Google Books URL, and Goodreads search URL in `metadata`.
+Legacy `/movies` and `/movies/search` routes still work while old clients migrate. Manual options should use `provider: "manual"`; book options can store authors, ISBN, publisher, Open Library work details, and Goodreads search URLs in `metadata`.
 
 
 ### Uploads
@@ -306,4 +309,10 @@ Run the frontend build from `frontend`:
 
 ```bash
 npm run build
+```
+
+Run the opt-in real Open Library integration checks (four searches plus a nonsense query):
+
+```bash
+VOTIFY_LIVE_BOOKS_TEST=1 go test ./internal/api -run '^TestBooksLive$' -v -count=1
 ```

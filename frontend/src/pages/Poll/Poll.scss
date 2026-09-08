@@ -128,10 +128,12 @@
     max-height: 460px;
   }
 
-  .suggestions-list--cards button {
+  .suggestions-list--cards .book-suggestion {
     display: grid;
     grid-template-columns: 88px 1fr;
     align-items: start;
+    border: 1px solid #dde2e7;
+    border-radius: 8px;
     min-height: 132px;
     padding: 10px;
     text-align: left;
