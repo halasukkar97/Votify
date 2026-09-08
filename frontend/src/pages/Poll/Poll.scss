@@ -313,6 +313,10 @@
     gap: 20px;
   }
 
+  .movie-grid--books {
+    align-items: start;
+  }
+
   .movie-card {
     position: relative;
     display: grid;
@@ -455,18 +459,6 @@
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;
-  }
-
-  .description-toggle {
-    justify-self: start;
-    width: auto;
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: #2f5f9f;
-    font-weight: 700;
-    text-decoration: underline;
   }
 
   .start-voting-panel {

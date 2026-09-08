@@ -120,7 +120,6 @@ export function PollPage({ t }: PollPageProps) {
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
   const [addingBookKey, setAddingBookKey] = useState('');
   const addingBookKeyRef = useRef('');
-  const [expandedDescriptionIds, setExpandedDescriptionIds] = useState<Set<string>>(() => new Set());
   const [isAddingMovie, setIsAddingMovie] = useState(false);
   const [selectedMovieIds, setSelectedMovieIds] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState(() => localStorage.getItem(userIDStorageKey) ?? '');
@@ -386,18 +385,6 @@ export function PollPage({ t }: PollPageProps) {
       addingBookKeyRef.current = '';
       setAddingBookKey('');
     }
-  }
-
-  function toggleDescription(optionID: string) {
-    setExpandedDescriptionIds((currentIDs) => {
-      const nextIDs = new Set(currentIDs);
-      if (nextIDs.has(optionID)) {
-        nextIDs.delete(optionID);
-      } else {
-        nextIDs.add(optionID);
-      }
-      return nextIDs;
-    });
   }
 
   function handleManualOptionChange(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
@@ -880,7 +867,7 @@ export function PollPage({ t }: PollPageProps) {
 
         <section className="movie-grid-section">
           <h2>{t('poll.moviesInPoll')}</h2>
-          <div className="movie-grid">
+          <div className={pollType === 'book' ? 'movie-grid movie-grid--books' : 'movie-grid'}>
             {sortedMovies.length > 0 ? (
               sortedMovies.map((movie) => {
                 const poster = movie.imageUrl ?? movie.posterUrl;
@@ -891,9 +878,6 @@ export function PollPage({ t }: PollPageProps) {
                 const voteCount = pollResults[movie.id] ?? countVotesForMovie(movie.id, pollState.poll?.votes ?? []);
                 const isSelected = displayedSelectedMovieIds.includes(movie.id);
                 const isSelectionDisabled = !isVotingActive || votingEnded || hasAlreadyVoted;
-                const isLongBookDescription = pollType === 'book' && description.length > 240;
-                const isDescriptionExpanded = expandedDescriptionIds.has(movie.id);
-                const shouldClampDescription = pollType !== 'book' || (isLongBookDescription && !isDescriptionExpanded);
 
                 return (
                   <article className={isVotingActive && isSelected ? 'movie-card movie-card--selected' : 'movie-card'} key={movie.id}>
@@ -920,14 +904,9 @@ export function PollPage({ t }: PollPageProps) {
                       <span className="vote-count-badge">{formatVoteCount(t('poll.votesLabel'), voteCount)}</span>
                       {description ? (
                         <div className="option-description-wrap">
-                          <p className={shouldClampDescription ? 'option-description option-description--collapsed' : 'option-description'}>
+                          <p className="option-description option-description--collapsed">
                             {description}
                           </p>
-                          {isLongBookDescription ? (
-                            <button type="button" className="description-toggle" onClick={() => toggleDescription(movie.id)}>
-                              {t(isDescriptionExpanded ? 'poll.showLess' : 'poll.showMore')}
-                            </button>
-                          ) : null}
                         </div>
                       ) : null}
                       {goodreadsUrl ? (
