@@ -341,6 +341,38 @@
     box-shadow: 0 14px 30px rgba(47, 125, 85, 0.16);
   }
 
+  .option-remove-button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: #dc3545;
+    color: #ffffff;
+    box-shadow: 0 5px 14px rgba(170, 25, 39, 0.3);
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .option-remove-button:hover:not(:disabled),
+  .option-remove-button:focus-visible {
+    background: #b82433;
+  }
+
+  .option-remove-button:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
   .movie-select-control {
     position: absolute;
     top: 12px;

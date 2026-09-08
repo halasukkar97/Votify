@@ -290,15 +290,19 @@ func (store *Store) GetOptionPollID(optionID string) (string, bool, error) {
 	if err == nil {
 		return pollID, true, nil
 	}
-	if err != sql.ErrNoRows {
-		return "", false, err
-	}
+	optionErr := err
 
 	err = store.DB.QueryRow("SELECT poll_id FROM movies WHERE id = $1", optionID).Scan(&pollID)
 	if err == sql.ErrNoRows {
+		if optionErr != sql.ErrNoRows {
+			return "", false, optionErr
+		}
 		return "", false, nil
 	}
 	if err != nil {
+		if optionErr != sql.ErrNoRows {
+			return "", false, optionErr
+		}
 		return "", false, err
 	}
 

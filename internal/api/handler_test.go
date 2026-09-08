@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 	"votify/internal/database"
@@ -461,6 +462,54 @@ func TestCreateMovieHandlerRejectsMovieAfterVotingStarts(t *testing.T) {
 
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d with body %q", response.Code, response.Body.String())
+	}
+
+	requireExpectations(t, mock)
+}
+
+func TestDeleteOptionHandlerRemovesOptionDuringSetup(t *testing.T) {
+	_, mock := newMockDatabase(t)
+	deadline := time.Now().Add(24 * time.Hour)
+
+	mock.ExpectQuery("SELECT poll_id FROM options WHERE id").
+		WithArgs("option-1").
+		WillReturnRows(sqlmock.NewRows([]string{"poll_id"}).AddRow("poll-1"))
+	expectPollLookupByIDWithVoting(mock, "poll-1", deadline, false)
+	expectEmptyRelations(mock, "poll-1")
+	mock.ExpectExec("DELETE FROM options WHERE id").
+		WithArgs("option-1").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	request := httptest.NewRequest(http.MethodDelete, "/options/option-1", nil)
+	response := httptest.NewRecorder()
+	OptionByIDHandler(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d with body %q", response.Code, response.Body.String())
+	}
+
+	requireExpectations(t, mock)
+}
+
+func TestDeleteOptionHandlerRejectsRemovalAfterVotingStarts(t *testing.T) {
+	_, mock := newMockDatabase(t)
+	deadline := time.Now().Add(24 * time.Hour)
+
+	mock.ExpectQuery("SELECT poll_id FROM options WHERE id").
+		WithArgs("option-1").
+		WillReturnRows(sqlmock.NewRows([]string{"poll_id"}).AddRow("poll-1"))
+	expectPollLookupByIDWithVoting(mock, "poll-1", deadline, true)
+	expectEmptyRelations(mock, "poll-1")
+
+	request := httptest.NewRequest(http.MethodDelete, "/options/option-1", nil)
+	response := httptest.NewRecorder()
+	OptionByIDHandler(response, request)
+
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d with body %q", response.Code, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), "voting has already started") {
+		t.Fatalf("expected setup-state error, got %q", response.Body.String())
 	}
 
 	requireExpectations(t, mock)

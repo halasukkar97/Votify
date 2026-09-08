@@ -120,6 +120,8 @@ export function PollPage({ t }: PollPageProps) {
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
   const [addingBookKey, setAddingBookKey] = useState('');
   const addingBookKeyRef = useRef('');
+  const deletingOptionIDsRef = useRef<Set<string>>(new Set());
+  const [deletingOptionIDs, setDeletingOptionIDs] = useState<Set<string>>(() => new Set());
   const [isAddingMovie, setIsAddingMovie] = useState(false);
   const [selectedMovieIds, setSelectedMovieIds] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState(() => localStorage.getItem(userIDStorageKey) ?? '');
@@ -474,6 +476,56 @@ export function PollPage({ t }: PollPageProps) {
     }
   }
 
+  async function handleRemoveOption(optionID: string) {
+    if (!pollState.poll || isVotingActive || votingEnded || deletingOptionIDsRef.current.has(optionID)) {
+      return;
+    }
+
+    deletingOptionIDsRef.current.add(optionID);
+    setDeletingOptionIDs((currentIDs) => new Set(currentIDs).add(optionID));
+    setPollState((currentState) => {
+      if (!currentState.poll) {
+        return currentState;
+      }
+
+      return {
+        ...currentState,
+        poll: {
+          ...currentState.poll,
+          options: currentState.poll.options?.filter((option) => option.id !== optionID),
+          movies: currentState.poll.movies?.filter((option) => option.id !== optionID),
+        },
+      };
+    });
+    setPollResults((currentResults) => {
+      const nextResults = { ...currentResults };
+      delete nextResults[optionID];
+      return nextResults;
+    });
+
+    try {
+      await apiClient.deleteOption(optionID);
+      showToast({ type: 'success', message: t('poll.removeOptionSuccess') });
+    } catch (error) {
+      try {
+        await refreshPoll();
+      } catch {
+        // Keep the original delete error as the user-facing failure.
+      }
+      showToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : t('poll.removeOptionError'),
+      });
+    } finally {
+      deletingOptionIDsRef.current.delete(optionID);
+      setDeletingOptionIDs((currentIDs) => {
+        const nextIDs = new Set(currentIDs);
+        nextIDs.delete(optionID);
+        return nextIDs;
+      });
+    }
+  }
+
   function handleToggleMovie(movieID: string) {
     if (!isVotingActive || votingEnded || hasAlreadyVoted) {
       return;
@@ -675,7 +727,7 @@ export function PollPage({ t }: PollPageProps) {
           ) : (
             <div className="start-voting-panel">
               <p>{t('poll.setupPhase')}</p>
-              <button type="button" disabled={votingEnded || isActivatingVoting} onClick={handleOpenStartVotingConfirm}>
+              <button type="button" disabled={votingEnded || isActivatingVoting || deletingOptionIDs.size > 0} onClick={handleOpenStartVotingConfirm}>
                 {isActivatingVoting ? t('poll.startingVoting') : t('poll.startVoting')}
               </button>
             </div>
@@ -881,6 +933,17 @@ export function PollPage({ t }: PollPageProps) {
 
                 return (
                   <article className={isVotingActive && isSelected ? 'movie-card movie-card--selected' : 'movie-card'} key={movie.id}>
+                    {!isVotingActive && !votingEnded ? (
+                      <button
+                        type="button"
+                        className="option-remove-button"
+                        aria-label={t('poll.removeOption') + ': ' + movie.title}
+                        disabled={deletingOptionIDs.has(movie.id)}
+                        onClick={() => handleRemoveOption(movie.id)}
+                      >
+                        <span aria-hidden="true">-</span>
+                      </button>
+                    ) : null}
                     {isVotingActive ? (
                     <label className="movie-select-control">
                       <input

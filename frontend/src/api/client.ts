@@ -174,6 +174,12 @@ export const apiClient = {
       body: JSON.stringify(payload),
     }),
 
+  // deleteOption removes an option only while its poll is still in setup.
+  deleteOption: (optionId: string) =>
+    request<{ deleted: boolean }>('/options/' + encodeURIComponent(optionId), {
+      method: 'DELETE',
+    }),
+
   // createUser creates a backend voter record for the saved display name.
   createUser: (payload: CreateUserPayload) =>
     request<User>('/users', {

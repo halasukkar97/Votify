@@ -219,11 +219,12 @@ Poll responses include `options`, `votes`, and a compatibility `movies` field fo
 ```http
 POST /options
 GET /options
+DELETE /options/{optionId}
 GET /options/search?type=movie&q=dune
 GET /options/search?type=book&q=atomic+habits
 ```
 
-Creates, lists, or searches options. Movie search uses TMDB, and book search uses Open Library. Provider errors return an error response so the frontend can show a search failure instead of pretending there were no results.
+Creates, lists, removes, or searches options. Adding and removing options are allowed only before voting starts and are rejected by the backend after the poll enters the voting state. Movie search uses TMDB, and book search uses Open Library. Provider errors return an error response so the frontend can show a search failure instead of pretending there were no results.
 
 Example option body:
 
