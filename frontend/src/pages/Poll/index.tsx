@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { apiClient } from '../../api/client';
@@ -118,7 +118,9 @@ export function PollPage({ t }: PollPageProps) {
   const [manualOption, setManualOption] = useState<ManualOptionValues>(initialManualOption);
   const [manualCoverFile, setManualCoverFile] = useState<File | null>(null);
   const [isManualEntryOpen, setIsManualEntryOpen] = useState(false);
-  const [loadingBookKey, setLoadingBookKey] = useState('');
+  const [addingBookKey, setAddingBookKey] = useState('');
+  const addingBookKeyRef = useRef('');
+  const [expandedDescriptionIds, setExpandedDescriptionIds] = useState<Set<string>>(() => new Set());
   const [isAddingMovie, setIsAddingMovie] = useState(false);
   const [selectedMovieIds, setSelectedMovieIds] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState(() => localStorage.getItem(userIDStorageKey) ?? '');
@@ -322,7 +324,7 @@ export function PollPage({ t }: PollPageProps) {
     }));
   }
 
-  async function handleSelectMovie(movie: ExternalMovie) {
+  function handleSelectMovie(movie: ExternalMovie) {
     setMovieDraft({ title: movie.title });
     setMovieSearch({
       suggestions: [],
@@ -331,19 +333,71 @@ export function PollPage({ t }: PollPageProps) {
       searchError: '',
       hasSearched: true,
     });
-    if (movie.provider === 'open-library') {
-      setLoadingBookKey(movie.id);
-      try {
-        const details = await apiClient.bookDetails(movie.externalId);
-        setMovieSearch((current) => current.selectedMovie === movie
-          ? { ...current, selectedMovie: { ...movie, overview: details.description } }
-          : current);
-      } catch {
-        // Details are optional: the selected search result can still be added.
-      } finally {
-        setLoadingBookKey((key) => key === movie.id ? '' : key);
-      }
+  }
+
+  async function handleAddBookResult(book: ExternalMovie) {
+    if (!pollState.poll || votingEnded || isVotingActive || addingBookKeyRef.current) {
+      return;
     }
+
+    const options = pollState.poll.options ?? pollState.poll.movies ?? [];
+    const alreadyExists = options.some((option) =>
+      option.provider === book.provider && option.externalId === book.externalId,
+    );
+    if (alreadyExists) {
+      showToast({ type: 'error', message: t('poll.bookAlreadyAdded') });
+      return;
+    }
+
+    addingBookKeyRef.current = book.id;
+    setAddingBookKey(book.id);
+
+    try {
+      let description = book.overview ?? '';
+      try {
+        const details = await apiClient.bookDetails(book.externalId);
+        description = details.description;
+      } catch {
+        // Work details are optional; the search result is still a valid book option.
+      }
+
+      await apiClient.createOption({
+        title: book.title,
+        pollId: pollState.poll.id,
+        releaseYear: getReleaseYear(book),
+        description,
+        imageUrl: getExternalImageURL(book),
+        posterUrl: getExternalImageURL(book),
+        provider: book.provider,
+        externalId: book.externalId,
+        metadata: book.metadata ?? {},
+      });
+
+      setMovieDraft(initialMovieDraft);
+      setMovieSearch(initialMovieSearch);
+      await refreshPoll();
+      showToast({ type: 'success', message: t('poll.addMovieSuccess') });
+    } catch (error) {
+      showToast({
+        type: 'error',
+        message: error instanceof Error ? error.message : t('poll.addMovieError'),
+      });
+    } finally {
+      addingBookKeyRef.current = '';
+      setAddingBookKey('');
+    }
+  }
+
+  function toggleDescription(optionID: string) {
+    setExpandedDescriptionIds((currentIDs) => {
+      const nextIDs = new Set(currentIDs);
+      if (nextIDs.has(optionID)) {
+        nextIDs.delete(optionID);
+      } else {
+        nextIDs.add(optionID);
+      }
+      return nextIDs;
+    });
   }
 
   function handleManualOptionChange(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
@@ -525,6 +579,10 @@ export function PollPage({ t }: PollPageProps) {
   async function handleAddMovie(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (pollType === 'book') {
+      return;
+    }
+
     if (!pollState.poll) {
       return;
     }
@@ -538,8 +596,6 @@ export function PollPage({ t }: PollPageProps) {
       showToast({ type: 'error', message: t('poll.chooseMovieFirst') });
       return;
     }
-
-    if (loadingBookKey === movieSearch.selectedMovie.id) return;
 
     setIsAddingMovie(true);
 
@@ -692,10 +748,16 @@ export function PollPage({ t }: PollPageProps) {
             <div className={pollType === 'book' ? 'suggestions-list suggestions-list--cards' : 'suggestions-list'}>
               {movieSearch.suggestions.map((movie) => {
                 const authors = getMetadataAuthors(movie.metadata);
-                const goodreadsUrl = getGoodreadsURL(movie);
 
                 return pollType === 'book' ? (
-                  <div key={movie.id} className="book-suggestion">
+                  <div key={movie.id} className="book-suggestion" aria-busy={addingBookKey === movie.id}>
+                    <button
+                      type="button"
+                      className="book-suggestion-action"
+                      aria-label={t('poll.addBookButton') + ': ' + movie.title}
+                      disabled={Boolean(addingBookKey)}
+                      onClick={() => handleAddBookResult(movie)}
+                    />
                     <span className="suggestion-cover">
                       {getExternalImageURL(movie) ? <img src={getExternalImageURL(movie)} alt={t('poll.coverAlt')} /> : <span>{t('poll.noCover')}</span>}
                     </span>
@@ -703,13 +765,7 @@ export function PollPage({ t }: PollPageProps) {
                       <strong>{movie.title}</strong>
                       {authors.length > 0 ? <span>{authors.join(', ')}</span> : null}
                       {getReleaseYear(movie) ? <span>{getReleaseYear(movie)}</span> : null}
-                      {movie.overview ? <span className="suggestion-description">{movie.overview}</span> : null}
-                      {goodreadsUrl ? (
-                        <a href={goodreadsUrl} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()}>
-                          {t('poll.viewGoodreads')}
-                        </a>
-                      ) : null}
-                      <button type="button" className="suggestion-add-label" onClick={() => handleSelectMovie(movie)}>{t('poll.selectOption')}</button>
+                      {addingBookKey === movie.id ? <LoadingIndicator compact label={t('poll.addingMovie')} /> : null}
                     </span>
                   </div>
                 ) : (
@@ -722,32 +778,25 @@ export function PollPage({ t }: PollPageProps) {
             </div>
           ) : null}
 
-          {selectedMovie ? (
+          {selectedMovie && pollType !== 'book' ? (
             <div className="selected-movie-preview">
               {getExternalImageURL(selectedMovie) ? (
-                <img src={getExternalImageURL(selectedMovie)} alt={pollType === 'book' ? t('poll.coverAlt') : t('poll.posterAlt')} />
-              ) : pollType === 'book' ? (
-                <div className="cover-placeholder">{t('poll.noCover')}</div>
+                <img src={getExternalImageURL(selectedMovie)} alt={t('poll.posterAlt')} />
               ) : null}
               <div>
                 <strong>{t('poll.selectedMovie')}</strong>
                 <h3>{selectedMovie.title}</h3>
-                {getMetadataAuthors(selectedMovie.metadata).length > 0 ? <p>{getMetadataAuthors(selectedMovie.metadata).join(', ')}</p> : null}
                 <p>{getReleaseYear(selectedMovie) || ''}</p>
-                {loadingBookKey === selectedMovie.id ? <LoadingIndicator compact label={t('poll.bookDetailsLoading')} /> : null}
                 {selectedMovie.overview ? <p>{selectedMovie.overview}</p> : null}
-                {getGoodreadsURL(selectedMovie) ? (
-                  <a href={getGoodreadsURL(selectedMovie)} target="_blank" rel="noopener noreferrer">
-                    {t('poll.viewGoodreads')}
-                  </a>
-                ) : null}
               </div>
             </div>
           ) : null}
 
-          <button type="submit" disabled={votingEnded || isVotingActive || isAddingMovie || (!!selectedMovie && loadingBookKey === selectedMovie.id)}>
-            {isAddingMovie ? t('poll.addingMovie') : t(pollType === 'book' ? 'poll.addBookButton' : 'poll.addMovieButton')}
-          </button>
+          {pollType !== 'book' ? (
+            <button type="submit" disabled={votingEnded || isVotingActive || isAddingMovie}>
+              {isAddingMovie ? t('poll.addingMovie') : t('poll.addMovieButton')}
+            </button>
+          ) : null}
 
           <div className="manual-option-section">
             <p>{t('poll.cantFindItem')}</p>
@@ -842,6 +891,9 @@ export function PollPage({ t }: PollPageProps) {
                 const voteCount = pollResults[movie.id] ?? countVotesForMovie(movie.id, pollState.poll?.votes ?? []);
                 const isSelected = displayedSelectedMovieIds.includes(movie.id);
                 const isSelectionDisabled = !isVotingActive || votingEnded || hasAlreadyVoted;
+                const isLongBookDescription = pollType === 'book' && description.length > 240;
+                const isDescriptionExpanded = expandedDescriptionIds.has(movie.id);
+                const shouldClampDescription = pollType !== 'book' || (isLongBookDescription && !isDescriptionExpanded);
 
                 return (
                   <article className={isVotingActive && isSelected ? 'movie-card movie-card--selected' : 'movie-card'} key={movie.id}>
@@ -866,7 +918,18 @@ export function PollPage({ t }: PollPageProps) {
                       </div>
                       {authors.length > 0 ? <p className="option-authors">{authors.join(', ')}</p> : null}
                       <span className="vote-count-badge">{formatVoteCount(t('poll.votesLabel'), voteCount)}</span>
-                      {description ? <p>{description}</p> : null}
+                      {description ? (
+                        <div className="option-description-wrap">
+                          <p className={shouldClampDescription ? 'option-description option-description--collapsed' : 'option-description'}>
+                            {description}
+                          </p>
+                          {isLongBookDescription ? (
+                            <button type="button" className="description-toggle" onClick={() => toggleDescription(movie.id)}>
+                              {t(isDescriptionExpanded ? 'poll.showLess' : 'poll.showMore')}
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {goodreadsUrl ? (
                         <a href={goodreadsUrl} target="_blank" rel="noopener noreferrer">
                           {t('poll.viewGoodreads')}

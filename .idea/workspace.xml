@@ -80,9 +80,6 @@
       <entry key="W1" value="43.87430170775298" />
     </decayedShown>
   </component>
-  <component name="OptimizeOnSaveOptions">
-    <option name="myRunOnSave" value="false" />
-  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5,
   &quot;fromUser&quot;: false
@@ -161,7 +158,7 @@
       <updated>1781121542734</updated>
       <workItem from="1781169537316" duration="31000" />
       <workItem from="1781170153871" duration="58000" />
-      <workItem from="1788789896053" duration="515000" />
+      <workItem from="1788789896053" duration="668000" />
     </task>
     <servers />
   </component>
