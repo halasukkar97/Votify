@@ -522,6 +522,13 @@ func (store *Store) GetAllOptions() ([]domain.Option, error) {
 
 	if err != nil {
 		rows, err = store.DB.Query(
+			"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year, COALESCE(metadata::text, '{}') AS metadata FROM options",
+		)
+		if err == nil {
+			return store.scanOptionRows(rows, "optionMetadata")
+		}
+
+		rows, err = store.DB.Query(
 			"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year FROM options",
 		)
 		if err == nil {
@@ -551,6 +558,14 @@ func (store *Store) GetOptionsByPollID(pollID string) ([]domain.Option, error) {
 	)
 
 	if err != nil {
+		rows, err = store.DB.Query(
+			"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year, COALESCE(metadata::text, '{}') AS metadata FROM options WHERE poll_id = $1",
+			pollID,
+		)
+		if err == nil {
+			return store.scanOptionRows(rows, "optionMetadata")
+		}
+
 		rows, err = store.DB.Query(
 			"SELECT id, poll_id, title, description, COALESCE(image_url, '') AS image_url, release_year FROM options WHERE poll_id = $1",
 			pollID,
@@ -596,6 +611,16 @@ func (store *Store) scanOptionRows(rows *sql.Rows, rowShape string) ([]domain.Op
 				&currentOption.ReleaseYear,
 				&currentOption.Provider,
 				&currentOption.ExternalID,
+				&metadataText,
+			)
+		case "optionMetadata":
+			err = rows.Scan(
+				&currentOption.ID,
+				&currentOption.PollID,
+				&currentOption.Title,
+				&currentOption.Description,
+				&currentOption.ImageURL,
+				&currentOption.ReleaseYear,
 				&metadataText,
 			)
 		case "optionProvider":

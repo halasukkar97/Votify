@@ -116,6 +116,37 @@ func TestActivateVotingUpdatesPollPhase(t *testing.T) {
 	requireExpectations(t, mock)
 }
 
+func TestGetOptionsByPollIDPreservesMetadataWithoutProviderColumns(t *testing.T) {
+	store, mock := newMockStore(t)
+
+	mock.ExpectQuery("COALESCE\\(provider").
+		WithArgs("poll-1").
+		WillReturnError(errors.New("column provider does not exist"))
+	mock.ExpectQuery("COALESCE\\(metadata::text").
+		WithArgs("poll-1").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "poll_id", "title", "description", "image_url", "release_year", "metadata",
+		}).AddRow(
+			"book-1",
+			"poll-1",
+			"Atomic Habits",
+			"Full description",
+			"https://covers.openlibrary.org/cover.jpg",
+			2018,
+			`{"authors":["James Clear"],"goodreadsUrl":"https://www.goodreads.com/search?q=9780735211292"}`,
+		))
+
+	options, err := store.GetOptionsByPollID("poll-1")
+	if err != nil {
+		t.Fatalf("expected metadata-compatible option query to succeed, got %v", err)
+	}
+	if len(options) != 1 || options[0].Metadata["goodreadsUrl"] != "https://www.goodreads.com/search?q=9780735211292" {
+		t.Fatalf("expected Goodreads metadata to survive compatibility read, got %+v", options)
+	}
+
+	requireExpectations(t, mock)
+}
+
 func TestSaveMovieWritesMovieToDatabase(t *testing.T) {
 	store, mock := newMockStore(t)
 	m := domain.Movie{
